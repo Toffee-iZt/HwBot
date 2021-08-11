@@ -1,41 +1,45 @@
 package bot
 
 import (
-	"HwBot/bot/api"
-	"HwBot/vkapi"
-	"HwBot/vkapi/longpoll"
+	"bytes"
 	"context"
-	"fmt"
 	"strings"
+
+	"github.com/Toffee-iZt/HwBot/vkapi/longpoll"
 )
+
+// IncomingMessage event.
+type IncomingMessage struct {
+	*longpoll.MessageNew
+}
+
+// CallbackMessage event.
+type CallbackMessage struct {
+	*longpoll.MessageEvent
+}
 
 func (b *Bot) handle(ctx context.Context, e longpoll.Event) {
 	switch e.Type {
 	case longpoll.TypeMessageNew:
-		b.onMessage(ctx, &api.IncomingMessage{e.Object.(*longpoll.MessageNew)})
+		b.onMessage(ctx, &IncomingMessage{e.Object.(*longpoll.MessageNew)})
 	case longpoll.TypeMessageEvent:
-		b.onCallback(ctx, &api.CallbackMessage{e.Object.(*longpoll.MessageEvent)})
+		b.onCallback(ctx, &CallbackMessage{e.Object.(*longpoll.MessageEvent)})
 	}
 }
 
-func (b *Bot) execCommand(msg *api.IncomingMessage) {
+func (b *Bot) execCommand(msg *IncomingMessage) {
 	s := strings.Split(msg.Message.Text, " ")
-	cmd := s[0][1:]
-	if cmd == "help" {
-		b.sendHelp(msg, s[1:])
-		return
-	}
-	c := b.commands[cmd]
-	if c == nil {
+	c := b.commands[s[0][1:]]
+	if isuser := msg.Message.PeerID < 2e9; c == nil || !c.Priv && isuser || !c.Chat && !isuser {
 		return
 	}
 
 	c.Run(b, msg, s[1:])
 }
 
-func (b *Bot) onMessage(ctx context.Context, msg *api.IncomingMessage) {
+func (b *Bot) onMessage(ctx context.Context, msg *IncomingMessage) {
 	m := &msg.Message
-	if n := len(m.Text); n > 1 && strings.IndexByte(b.cfg.Prefixes, m.Text[0]) != -1 {
+	if n := len(m.Text); n > 1 && bytes.IndexByte(b.pref, m.Text[0]) != -1 {
 		if n > 300 {
 			m.Text = m.Text[:300]
 		}
@@ -43,28 +47,14 @@ func (b *Bot) onMessage(ctx context.Context, msg *api.IncomingMessage) {
 		return
 	}
 
-	for i := range b.modules {
-		m := b.modules[i]
-		if m.OnMessage != nil {
-			m.OnMessage(b, msg)
-		}
+	// debug
+	u, err := b.API().Users.Get([]int{m.FromID})
+	if err != nil {
+		b.log.Error(err.Error())
+		return
 	}
+
+	b.log.Info(":::DEBUG:::New message: from: %s %s\n%s", u[0].FirstName, u[0].LastName, m.Text)
 }
 
-func (b *Bot) onCallback(ctx context.Context, cb *api.CallbackMessage) {}
-
-func (b *Bot) sendHelp(msg *api.IncomingMessage, a []string) {
-	if len(a) > 0 {
-		c := b.commands[a[0]]
-		if c != nil {
-			b.API().Messages.Send(vkapi.MessagePeer{PeerID: msg.Message.PeerID}, vkapi.MessageContent{Message: fmt.Sprintf("%s - %s\n%s", c.Cmd, c.Desc, c.Help)})
-			return
-		}
-	}
-	var h string
-
-	for _, c := range b.commands {
-		h += fmt.Sprintf("%s - %s\n", c.Cmd, c.Desc)
-	}
-	b.API().Messages.Send(vkapi.MessagePeer{PeerID: msg.Message.PeerID}, vkapi.MessageContent{Message: h})
-}
+func (b *Bot) onCallback(ctx context.Context, cb *CallbackMessage) {}

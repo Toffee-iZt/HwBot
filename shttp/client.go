@@ -9,12 +9,12 @@ import (
 
 // Client is fasthttp client.
 type Client struct {
-	client fasthttp.Client
+	fasthttp.Client
 }
 
 // Do performs the given http request and fills the given http response.
 func (c *Client) Do(req *Request, resp *Response) error {
-	return c.client.Do(req, resp)
+	return c.Client.Do(req, resp)
 }
 
 // DoContext performs the given http request with context and fills the given http response.
@@ -31,7 +31,7 @@ func (c *Client) DoContext(ctx context.Context, req *Request, resp *Response) er
 	mu := sync.Mutex{}
 
 	go func() {
-		err := c.client.Do(reqCopy, respCopy)
+		err := c.Client.Do(reqCopy, respCopy)
 		mu.Lock()
 		select {
 		case <-ch: // closed when ctx is done

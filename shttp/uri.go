@@ -61,3 +61,10 @@ func (u *URIBuilder) Build(query *Query, params ...string) *URIBuffer {
 
 // URIBuffer struct.
 type URIBuffer = bytebufferpool.ByteBuffer
+
+// URIFromString copies string to the uri buffer.
+func URIFromString(s string) *URIBuffer {
+	buf := uripool.Get()
+	buf.SetString(s)
+	return buf
+}

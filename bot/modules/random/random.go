@@ -1,27 +1,29 @@
-package main
+package random
 
 import (
-	botapi "HwBot/bot/api"
-	"HwBot/common/strbytes"
-	"HwBot/vkapi/vkutils"
 	"math/rand"
 	"strconv"
 	"time"
+
+	"github.com/Toffee-iZt/HwBot/bot"
+	"github.com/Toffee-iZt/HwBot/common/strbytes"
+	"github.com/Toffee-iZt/HwBot/logger"
+	"github.com/Toffee-iZt/HwBot/vkapi/vkutils"
 )
 
 // Module ...
-var Module = botapi.Module{
-	Name: "Random",
-	Init: func(_ botapi.Bot, _ botapi.Logger) bool {
+var Module = bot.Module{
+	Name: "random",
+	Init: func(_ *bot.Bot, _ *logger.Logger) bool {
 		myRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 		return true
 	},
-	Commands: []*botapi.Command{&list, &number, &who, &flip, &info, &when},
+	Commands: []*bot.Command{&list, &number, &who, &flip, &info, &when},
 }
 
 var myRand *rand.Rand
 
-var list = botapi.Command{
+var list = bot.Command{
 	Cmd:  "list",
 	Desc: "Рандомный список участников",
 	Help: "/список умных - список из 5 рандомных участников" +
@@ -29,7 +31,7 @@ var list = botapi.Command{
 		"\nНапример /список 12 задротов - список из 12 участников",
 	Chat: true,
 	Priv: false,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, args []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
 		members, err := b.API().Messages.GetChatMembers(vkutils.PeerToChat(m.Message.PeerID))
 		if err != nil {
 			b.SimpleReply(m, "У бота недостаточно прав доступа для выполнения команды")
@@ -62,7 +64,7 @@ var list = botapi.Command{
 	},
 }
 
-var number = botapi.Command{
+var number = bot.Command{
 	Cmd:  "rand",
 	Desc: "Рандомное число",
 	Help: "/rand - рандомное число [0, 100]" +
@@ -70,7 +72,7 @@ var number = botapi.Command{
 		"\nmax также принимает 2(0b), 8(0 или 0o), 16(0x) системы счисления",
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, args []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
 		var max int64 = 100
 		var base = 10
 		if len(args) > 0 {
@@ -108,13 +110,13 @@ var number = botapi.Command{
 	},
 }
 
-var who = botapi.Command{
+var who = bot.Command{
 	Cmd:  "кто",
 	Desc: "Выбрать рандомного участника",
 	Help: "/кто <string>",
 	Chat: true,
 	Priv: false,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, args []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
 		members, err := b.API().Messages.GetChatMembers(vkutils.PeerToChat(m.Message.PeerID))
 		if err != nil {
 			b.SimpleReply(m, "У бота недостаточно прав доступа для выполнения команды")
@@ -132,13 +134,13 @@ var who = botapi.Command{
 	},
 }
 
-var flip = botapi.Command{
+var flip = bot.Command{
 	Cmd:  "flip",
 	Desc: "Подбросить монетку",
 	Help: "",
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, _ []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
 		var r string
 		if myRand.Intn(2) == 1 {
 			r = "Выпал орёл"
@@ -149,13 +151,13 @@ var flip = botapi.Command{
 	},
 }
 
-var info = botapi.Command{
+var info = bot.Command{
 	Cmd:  "инфа",
 	Desc: "Вероятность события",
 	Help: "/инфа <событие> - случайная вероятность события",
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, args []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
 		if len(args) == 0 {
 			b.SimpleReply(m, "Укажите событие")
 			return
@@ -166,13 +168,13 @@ var info = botapi.Command{
 	},
 }
 
-var when = botapi.Command{
+var when = bot.Command{
 	Cmd:  "когда",
 	Desc: "Когда произойдет событие",
 	Help: "/когда <событие> - случайная дата события",
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, args []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
 		if len(args) == 0 {
 			b.SimpleReply(m, "Укажите событие")
 			return

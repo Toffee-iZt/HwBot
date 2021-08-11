@@ -9,7 +9,8 @@ const Byte uint64 = 1
 
 // binary
 const (
-	KibiByte = Byte << (10 * iota)
+	_ = Byte << (10 * iota)
+	KibiByte
 	MebiByte
 	GibiByte
 	TebiByte

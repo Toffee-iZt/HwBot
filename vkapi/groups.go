@@ -2,6 +2,8 @@ package vkapi
 
 import (
 	"strconv"
+
+	"github.com/Toffee-iZt/HwBot/vkapi/vktypes"
 )
 
 // ProvideGroups makes groups provider.
@@ -27,15 +29,18 @@ type Group struct {
 	Photo50     string `json:"photo_50"`
 	Photo100    string `json:"photo_100"`
 	Photo200    string `json:"photo_200"`
+
+	GroupOptFields
 }
 
 // GetByID returns information about communities by their IDs.
 // TODO: fields support.
-func (g *GroupsProvider) GetByID(groupIds []int) ([]Group, *Error) {
+func (g *GroupsProvider) GetByID(groupIds []int, fields ...string) ([]Group, error) {
 	args := NewArgs()
 	for _, id := range groupIds {
 		args.Add("group_ids", strconv.Itoa(id))
 	}
+	args.Set("fields", fields...)
 
 	var groups []Group
 	err := g.client.Method("groups.getById", args, &groups)
@@ -50,9 +55,14 @@ type LongPollServer struct {
 }
 
 // GetLongPollServer returns the data needed to query a Long Poll server for events.
-func (g *GroupsProvider) GetLongPollServer() (*LongPollServer, *Error) {
+func (g *GroupsProvider) GetLongPollServer() (*LongPollServer, error) {
 	args := NewArgs().Set("group_id", strconv.Itoa(g.client.Group()))
 	var lps LongPollServer
 	err := g.client.Method("groups.getLongPollServer", args, &lps)
 	return &lps, err
+}
+
+// GroupOptFields struct.
+type GroupOptFields struct {
+	CropPhoto *vktypes.CropPhoto `json:"crop_photo"`
 }

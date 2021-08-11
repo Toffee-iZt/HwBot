@@ -45,19 +45,19 @@ func (s *Sync) Wait() {
 	<-s.Done()
 }
 
-// Close ...
+// Close closes sync instance without error.
 func (s *Sync) Close() {
 	s.ErrClose(nil)
 }
 
-// LockClose ...
+// LockClose closes sync instance with terminal function.
 func (s *Sync) LockClose(f func() error) {
 	s.mu.Lock()
 	s.close(f())
 	s.mu.Unlock()
 }
 
-// ErrClose ...
+// ErrClose closes sync instance with error.
 func (s *Sync) ErrClose(err error) {
 	s.mu.Lock()
 	s.close(err)
@@ -75,7 +75,7 @@ func (s *Sync) close(err error) {
 	}
 }
 
-// Err ...
+// Err returns error.
 func (s *Sync) Err() error {
 	s.mu.Lock()
 	e := s.err

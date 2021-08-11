@@ -8,8 +8,8 @@ import (
 	"github.com/fatih/color"
 )
 
-// GlobalWriter var.
-var GlobalWriter = &Writer{
+// DefaultWriter var.
+var DefaultWriter = &Writer{
 	w: os.Stderr,
 	c: true,
 }

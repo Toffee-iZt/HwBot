@@ -1,9 +1,10 @@
 package vkapi
 
 import (
-	"HwBot/shttp"
 	"encoding/json"
 	"fmt"
+
+	"github.com/Toffee-iZt/HwBot/shttp"
 )
 
 // Version is a vk api version.
@@ -12,7 +13,7 @@ const Version = "5.120"
 var apibuilder = shttp.NewURIBuilder("https://api.vk.com", "method", "")
 
 // Auth ...
-func Auth(accessToken string) (*Client, *Error) {
+func Auth(accessToken string) (*Client, error) {
 	if accessToken == "" {
 		return nil, nil
 	}
@@ -60,7 +61,7 @@ func (c *Client) Group() int {
 }
 
 // Method ...
-func (c *Client) Method(method string, args Args, dst interface{}) *Error {
+func (c *Client) Method(method string, args Args, dst interface{}) error {
 	args.
 		Set("access_token", c.token).
 		Set("v", Version)
@@ -73,8 +74,11 @@ func (c *Client) Method(method string, args Args, dst interface{}) *Error {
 
 	err := c.client.Do(req, resp)
 	if err != nil {
-		e := Error{Message: err.Error()}
-		return e.fill(method, query)
+		return &HTTPError{
+			Args:    argMap(args),
+			Method:  method,
+			Message: err.Error(),
+		}
 	}
 
 	var res struct {
@@ -82,20 +86,32 @@ func (c *Client) Method(method string, args Args, dst interface{}) *Error {
 		Response json.RawMessage `json:"response"`
 	}
 
-	err = json.Unmarshal(resp.Body(), &res)
+	body := resp.SwapBody(nil)
+
+	err = json.Unmarshal(body, &res)
 	if err != nil {
-		e := Error{Message: err.Error()}
-		return e.fill(method, query)
+		return &JSONError{
+			Args:    argMap(args),
+			Method:  method,
+			Message: err.Error(),
+			Data:    body,
+		}
 	}
 
 	if res.Error != nil {
-		return res.Error.fill(method, query)
+		res.Error.Args = argMap(args)
+		res.Error.Method = method
+		return res.Error
 	}
 
 	err = json.Unmarshal(res.Response, dst)
 	if err != nil {
-		e := Error{Message: err.Error()}
-		return e.fill(method, query)
+		return &JSONError{
+			Args:    argMap(args),
+			Method:  method,
+			Message: err.Error(),
+			Data:    res.Response,
+		}
 	}
 
 	return nil
@@ -128,29 +144,55 @@ func NewArgs() Args {
 	return Args{shttp.AcquireQuery()}
 }
 
+func argMap(a Args) map[string]string {
+	m := make(map[string]string)
+	a.q.VisitAll(func(k, v []byte) {
+		key := string(k)
+		if key != "access_token" && key != "v" {
+			m[key] = string(v)
+		}
+	})
+	return m
+}
+
+// HTTPError represents vk method http error.
+type HTTPError struct {
+	Args    map[string]string
+	Method  string
+	Message string
+}
+
+func (e *HTTPError) Error() string {
+	str := fmt.Sprintf("vk.%s: http %s", e.Method, e.Message)
+	if e.Args != nil {
+		str += "\n" + fmt.Sprint(e.Args)
+	}
+	return str
+}
+
+// JSONError represents vk method json error.
+type JSONError struct {
+	Args    map[string]string
+	Method  string
+	Message string
+	Data    []byte
+}
+
+func (e *JSONError) Error() string {
+	str := fmt.Sprintf("vk.%s: json %s", e.Method, e.Message)
+	if e.Args != nil {
+		str += "\n" + fmt.Sprint(e.Args)
+	}
+	str += "\n" + string(e.Data)
+	return str
+}
+
 // Error is vk api error.
 type Error struct {
 	Args    map[string]string
 	Method  string
 	Message string `json:"error_msg"`
 	Code    int    `json:"error_code"`
-}
-
-func (e *Error) fill(m string, q *shttp.Query) *Error {
-	e.Method = m
-	e.Args = make(map[string]string)
-	q.VisitAll(func(k, v []byte) {
-		key := string(k)
-		if !(key == "access_token") {
-			e.Args[key] = string(v)
-		}
-	})
-	return e
-}
-
-// IsVK ...
-func (e *Error) IsVK() bool {
-	return e.Message != "" && e.Code == 0
 }
 
 func (e *Error) Error() string {

@@ -1,29 +1,29 @@
-package main
+package yalm
 
 import (
-	botapi "HwBot/bot/api"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/Toffee-iZt/HwBot/bot"
+	"github.com/Toffee-iZt/HwBot/logger"
 	"github.com/Toffee-iZt/balaboba"
 )
 
 // Module ...
-var Module = botapi.Module{
-	Name: "Yalm",
-	Init: func(_ botapi.Bot, l botapi.Logger) bool {
+var Module = bot.Module{
+	Name: "yalm",
+	Init: func(_ *bot.Bot, l *logger.Logger) bool {
 		log = l
 		client = balaboba.New()
 		err := client.Options()
 		if err != nil {
-			log.Error("balaboba init error: %s", err.Error())
+			log.Error("init error: %s", err.Error())
 			return false
 		}
-		log.Info("balaboba successfully inited")
 		return true
 	},
-	Commands: []*botapi.Command{
+	Commands: []*bot.Command{
 		&yalm,
 	},
 }
@@ -32,7 +32,7 @@ var Module = botapi.Module{
 
 var client *balaboba.Client
 
-var log botapi.Logger
+var log *logger.Logger
 
 const pErr = "Произошла ошибка в работе бота. Разработчик уже знает об этом, в скором времени будет пофикшено."
 const apiErrorFmt = "Произошла ошибка %s (%d) при работе с API балабобы. Такое случается, так как не изучены все аспекты работы API. Если вы знаете причину и как это исправить - напишите разработчику."
@@ -44,13 +44,13 @@ const help = `
 стиль указывается в формате sN, где N - номер стиля (см. styles)
 /yalm styles - список стилей генерации текста`
 
-var yalm = botapi.Command{
+var yalm = bot.Command{
 	Cmd:  "yalm",
 	Desc: "yandex balaboba (yalm)",
 	Help: balaboba.About + help,
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, a []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, a []string) {
 		if len(a) == 0 {
 			b.SimpleReply(m, help)
 			return

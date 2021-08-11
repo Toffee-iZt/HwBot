@@ -1,27 +1,34 @@
 package main
 
 import (
-	"HwBot/bot"
-	"HwBot/common/execdir"
-	"HwBot/logger"
-	"HwBot/vkapi"
 	"context"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/BurntSushi/toml"
+	"github.com/Toffee-iZt/HwBot/bot"
+	"github.com/Toffee-iZt/HwBot/bot/modules/builtin"
+	"github.com/Toffee-iZt/HwBot/bot/modules/debug"
+	"github.com/Toffee-iZt/HwBot/bot/modules/images"
+	"github.com/Toffee-iZt/HwBot/bot/modules/random"
+	"github.com/Toffee-iZt/HwBot/bot/modules/yalm"
+	"github.com/Toffee-iZt/HwBot/logger"
+	"github.com/Toffee-iZt/HwBot/vkapi"
+	"github.com/Toffee-iZt/workfs"
 )
 
 func main() {
 	println(os.Args[0])
-	println(execdir.GetExec(), execdir.GetExecDir())
+	println(workfs.GetExec(), workfs.GetExecDir())
 	println("PID", os.Getpid())
 	println("vkapi version:", vkapi.Version)
 
 	var config struct {
-		Bot bot.Config
-		Vk  struct {
+		Bot struct {
+			Prefixes string
+		}
+		Vk struct {
 			AccessToken string
 		}
 		Logger struct {
@@ -29,7 +36,7 @@ func main() {
 		}
 	}
 
-	f, err := execdir.Open("config.toml")
+	f, err := workfs.Open("config.toml")
 	if err != nil {
 		panic(err)
 	}
@@ -40,19 +47,14 @@ func main() {
 	}
 	f.Close()
 
-	var logWriter *logger.Writer
-
+	log := logger.New(logger.DefaultWriter, "MAIN")
 	if config.Logger.Path != "" {
-		logWriter, err = logger.NewWriterFile(config.Logger.Path)
+		w, err := logger.NewWriterFile(config.Logger.Path)
 		if err != nil {
 			panic(err)
 		}
-	} else {
-		logWriter = logger.NewWriter(os.Stderr, true)
+		log.SetWriter(w)
 	}
-
-	log := logger.New(logWriter, "MAIN")
-	log.SetWriter(logWriter)
 
 	log.Info("config loaded")
 
@@ -65,8 +67,8 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 
-	b := bot.New(vk, config.Bot, logWriter)
-	if !b.Run(ctx) {
+	b := bot.New(vk, []byte(config.Bot.Prefixes), log.Writer())
+	if !b.Run(ctx, &builtin.Module, &debug.Module, &random.Module, &yalm.Module, &images.Module) {
 		cancel()
 		return
 	}
@@ -74,7 +76,8 @@ func main() {
 	<-b.Done()
 	switch b.Err() {
 	case nil:
-		log.Info("nil error stop")
+		cancel()
+		log.Info("stopping without error")
 	case context.Canceled:
 		log.Info("stopping by os signal")
 	default:

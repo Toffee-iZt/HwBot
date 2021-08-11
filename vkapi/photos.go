@@ -1,8 +1,9 @@
 package vkapi
 
 import (
-	"HwBot/vkapi/vktypes"
 	"strconv"
+
+	"github.com/Toffee-iZt/HwBot/vkapi/vktypes"
 )
 
 // ProvidePhotos makes photos provider.
@@ -26,7 +27,7 @@ type MessagesUploadServer struct {
 
 // GetMessagesUploadServer returns the server address for photo upload in a private message for a user.
 // When uploaded successfully, the photo can be saved using the photos.saveMessagesPhoto method.
-func (p *PhotosProvider) GetMessagesUploadServer(peerID int) (*MessagesUploadServer, *Error) {
+func (p *PhotosProvider) GetMessagesUploadServer(peerID int) (*MessagesUploadServer, error) {
 	args := NewArgs().Set("peer_id", strconv.Itoa(peerID))
 	var mus MessagesUploadServer
 	err := p.client.Method("photos.getMessagesUploadServer", args, &mus)
@@ -49,7 +50,7 @@ func (p *PhotosProvider) GetMessagesUploadServer(peerID int) (*MessagesUploadSer
 
 // SaveMessagesPhoto saves a photo after being successfully uploaded.
 // URL obtained with photos.getMessagesUploadServer method.
-func (p *PhotosProvider) SaveMessagesPhoto(server int, photo, hash string) ([]vktypes.Photo, *Error) {
+func (p *PhotosProvider) SaveMessagesPhoto(server int, photo, hash string) ([]vktypes.Photo, error) {
 	args := NewArgs()
 	args.Set("server", strconv.Itoa(server))
 	args.Set("photo", photo)

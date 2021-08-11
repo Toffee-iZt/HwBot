@@ -1,8 +1,9 @@
 package longpoll
 
 import (
-	"HwBot/vkapi/vktypes"
 	"encoding/json"
+
+	"github.com/Toffee-iZt/HwBot/vkapi/vktypes"
 )
 
 // Event struct.

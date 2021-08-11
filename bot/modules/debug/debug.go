@@ -1,54 +1,45 @@
-package main
+package debug
 
 import (
-	botapi "HwBot/bot/api"
-	"HwBot/common/format"
-	"HwBot/common/rt"
-	"HwBot/vkapi"
 	"embed"
 	"encoding/json"
 	"fmt"
 	"runtime"
 	"time"
+
+	"github.com/Toffee-iZt/HwBot/bot"
+	"github.com/Toffee-iZt/HwBot/common/format"
+	"github.com/Toffee-iZt/HwBot/common/rt"
+	"github.com/Toffee-iZt/HwBot/logger"
+	"github.com/Toffee-iZt/HwBot/vkapi"
 )
 
 // Module ...
-var Module = botapi.Module{
-	Name: "Debug",
-	Init: func(_ botapi.Bot, l botapi.Logger) bool {
+var Module = bot.Module{
+	Name: "debug",
+	Init: func(_ *bot.Bot, l *logger.Logger) bool {
 		log = l
-		log.Info("debug successfully inited")
+		log.Info("log test")
 		return true
 	},
 	Terminate: nil,
-	Commands: []*botapi.Command{
+	Commands: []*bot.Command{
 		&debug,
 		&ping,
 		&testembed,
 		&vkslow,
 	},
-	OnMessage: func(b botapi.Bot, msg *botapi.IncomingMessage) {
-		m := &msg.Message
-		u, err := b.API().Users.Get(m.FromID)
-		if err != nil {
-			log.Error(err.Error())
-			return
-		}
-		log.Info(`New message:
-		from: %s %s
-		message: %s`, u[0].FirstName, u[0].LastName, m.Text)
-	},
 }
 
-var log botapi.Logger
+var log *logger.Logger
 
-var debug = botapi.Command{
+var debug = bot.Command{
 	Cmd:  "debug",
 	Desc: "debug",
 	Help: "/debug [gc] - информация об используемой памяти (аргумент gc запустит полную сборку мусора)",
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, args []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
 		var gc bool
 		if len(args) > 0 {
 			switch args[0] {
@@ -87,13 +78,13 @@ func memStats(gc bool) string {
 	return str
 }
 
-var ping = botapi.Command{
+var ping = bot.Command{
 	Cmd:  "ping",
 	Desc: "Проверка работоспособности бота",
 	Help: "",
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, _ []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
 		b.SimpleReply(m, "понг")
 	},
 }
@@ -101,13 +92,13 @@ var ping = botapi.Command{
 //go:embed resources
 var resFs embed.FS
 
-var testembed = botapi.Command{
+var testembed = bot.Command{
 	Cmd:  "embed",
 	Desc: "Test embed",
 	Help: "",
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, _ []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
 		f, err := resFs.Open("resources/gopher.png")
 		if err != nil {
 			b.SimpleReply(m, err.Error())
@@ -133,13 +124,13 @@ var testembed = botapi.Command{
 	},
 }
 
-var vkslow = botapi.Command{
+var vkslow = bot.Command{
 	Cmd:  "vkslow",
 	Desc: "",
 	Help: "",
 	Chat: true,
 	Priv: true,
-	Run: func(b botapi.Bot, m *botapi.IncomingMessage, _ []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
 		n := time.Now().Unix()
 		p := n - m.Message.Date
 		if p <= 2 {

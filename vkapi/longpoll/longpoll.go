@@ -1,13 +1,14 @@
 package longpoll
 
 import (
-	"HwBot/common"
-	"HwBot/shttp"
-	"HwBot/vkapi"
 	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/Toffee-iZt/HwBot/common"
+	"github.com/Toffee-iZt/HwBot/shttp"
+	"github.com/Toffee-iZt/HwBot/vkapi"
 )
 
 // New creates new longpoll instance.
@@ -22,7 +23,6 @@ func New(vk *vkapi.Client, wait int) *LongPoll {
 type LongPoll struct {
 	vk   *vkapi.Client
 	serv *vkapi.LongPollServer
-	ch   chan Event
 	wait string
 	sync common.Sync
 }
@@ -66,10 +66,10 @@ func (lp *LongPoll) Run(ctx context.Context) <-chan Event {
 		return nil
 	}
 
-	lp.ch = make(chan Event)
-	go lp.run(ctx)
+	ch := make(chan Event)
+	go lp.run(ctx, ch)
 
-	return lp.ch
+	return ch
 }
 
 type response struct {
@@ -78,7 +78,7 @@ type response struct {
 	Failed  int     `json:"failed"`
 }
 
-func (lp *LongPoll) run(ctx context.Context) {
+func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
 	uri := shttp.NewURIBuilder(lp.serv.Server)
 
 	args := new(shttp.Query)
@@ -127,7 +127,7 @@ func (lp *LongPoll) run(ctx context.Context) {
 
 		for _, u := range res.Updates {
 			select {
-			case lp.ch <- u:
+			case ch <- u:
 			case <-ctx.Done():
 				lp.sync.ErrClose(ctx.Err())
 				return

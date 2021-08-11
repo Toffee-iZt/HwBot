@@ -1,9 +1,10 @@
 package vkapi
 
 import (
-	"HwBot/vkapi/vktypes/keyboard"
 	"strconv"
 	"sync/atomic"
+
+	"github.com/Toffee-iZt/HwBot/vkapi/vktypes/keyboard"
 )
 
 // ProvideMessages makes messages provider.
@@ -60,7 +61,7 @@ type MessageContent struct {
 }
 
 // Send sends a message.
-func (m *MessagesProvider) Send(peer MessagePeer, msg MessageContent) (int, *Error) {
+func (m *MessagesProvider) Send(peer MessagePeer, msg MessageContent) (int, error) {
 	if msg.Message == "" && msg.Attachment == nil {
 		return 0, nil
 	}
@@ -116,7 +117,7 @@ type Member struct {
 }
 
 // GetChatMembers ...
-func (m *MessagesProvider) GetChatMembers(chatID int) (*Members, *Error) {
+func (m *MessagesProvider) GetChatMembers(chatID int) (*Members, error) {
 	args := NewArgs().Set("peer_id", strconv.Itoa(chatID+2e9))
 	var mem Members
 	err := m.client.Method("messages.getConversationMembers", args, &m)
@@ -124,7 +125,7 @@ func (m *MessagesProvider) GetChatMembers(chatID int) (*Members, *Error) {
 }
 
 // Kick ...
-func (m *MessagesProvider) Kick(chatID int, memberID int) *Error {
+func (m *MessagesProvider) Kick(chatID int, memberID int) error {
 	args := NewArgs()
 	args.Set("chat_id", strconv.Itoa(chatID))
 	args.Set("member_id", strconv.Itoa(memberID))

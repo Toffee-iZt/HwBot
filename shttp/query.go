@@ -3,8 +3,9 @@ package shttp
 // Short version of github.com/valyala/fasthttp.Args
 
 import (
-	"HwBot/common/strbytes"
 	"sync"
+
+	"github.com/Toffee-iZt/HwBot/common/strbytes"
 )
 
 // AcquireQuery returns an empty Query instance from query pool.
