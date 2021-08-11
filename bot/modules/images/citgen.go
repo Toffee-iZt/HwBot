@@ -26,16 +26,19 @@ var citgen = bot.Command{
 	Help: "/citen и ответить или переслать сообщение",
 	Priv: true,
 	Chat: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
+	Run: func(b *bot.Bot, m *bot.IncomingMessage, a []string) {
 		var fromID int
 		var text string
+		var t int64
 		switch {
 		case m.Message.Reply != nil:
 			r := m.Message.Reply
 			fromID, text = r.FromID, r.Text
+			t = r.Date
 		case len(m.Message.Forward) > 0:
 			f := m.Message.Forward[0]
 			fromID, text = f.FromID, f.Text
+			t = f.Date
 		default:
 			b.SimpleReply(m, "Ответьте или перешлите сообщение")
 			return
@@ -43,6 +46,9 @@ var citgen = bot.Command{
 		if text == "" {
 			b.SimpleReply(m, "Сообщение не содержит текста")
 			return
+		}
+		if len(a) > 0 {
+			text = strings.Join(a, " ")
 		}
 
 		api := b.API()
@@ -53,7 +59,7 @@ var citgen = bot.Command{
 			return
 		}
 
-		f, err := generateQuote(photo, name, text, fromID == m.Message.FromID, color.Black, color.White)
+		f, err := generateQuote(photo, name, text, time.Unix(t, 0), fromID == m.Message.FromID, color.Black, color.White)
 		if err != nil {
 			log.Error("citgen generate: %s", err.Error())
 			return
@@ -96,20 +102,10 @@ func getNamePhoto(api *vkapi.Client, from int) (string, image.Image, error) {
 		photoCrop = *u[0].Photo200
 	}
 
-	//size := photoCrop.Photo.Sizes[len(photoCrop.Photo.Sizes)-1]
-	//img, err := dl(size.URL)
 	img, err := dl(photoCrop)
 	if err != nil {
 		return "", nil, err
 	}
-
-	//c := photoCrop.Crop
-	//img = crop(img, image.Rect(
-	//	int(float64(size.Width)*(c.X/100)),
-	//	int(float64(size.Height)*(c.Y/100)),
-	//	int(float64(size.Width)*(c.X2/100)),
-	//	int(float64(size.Height)*(c.Y2/100)),
-	//))
 
 	return name, img, nil
 }
@@ -134,7 +130,7 @@ func getGoFontFace() font.Face {
 	return truetype.NewFace(gottf, &truetype.Options{Size: fontSize})
 }
 
-func generateQuote(photo image.Image, name, quote string, self bool, bg, fg color.Color) (fs.File, error) {
+func generateQuote(photo image.Image, name, quote string, t time.Time, self bool, bg, fg color.Color) (fs.File, error) {
 	lines, height := generateLines(quote, textPointX)
 
 	name += " " + copyrightSymbol
@@ -159,14 +155,14 @@ func generateQuote(photo image.Image, name, quote string, self bool, bg, fg colo
 	dc.DrawString(name, float64(padding), float64(height-padding))
 
 	// Draw time
-	t := time.Now().UTC().Format("02.01.2006 15:04")
-	dc.DrawString(t, float64(width-getStringWidth(t)-padding), float64(height-padding))
+	tstr := t.Format("02.01.2006 15:04")
+	dc.DrawString(tstr, float64(width-getStringWidth(tstr)-padding), float64(height-padding))
 
 	// Draw photo and make it round
 	px, py := width/6, height/2
 	dc.DrawEllipse(float64(px), float64(py), 100, 100)
 	dc.Clip()
-	dc.DrawImageAnchored( /*scaleQuad(photo, photoSize)*/ photo, px, py, 0.5, 0.5)
+	dc.DrawImageAnchored(photo, px, py, 0.5, 0.5)
 
 	f := workfs.OpenAtOnce("citgen.png")
 	err := png.Encode(f, dc.Image())

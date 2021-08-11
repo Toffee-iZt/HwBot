@@ -44,12 +44,12 @@ var help = bot.Command{
 		}
 		str := ">> Список модулей и команд\n"
 		for _, m := range mods {
-			str += "\n" + m.Name + "\n—>"
+			str += "\n" + m.Name + "\n"
 			for i, c := range m.Commands {
 				if i > 0 {
-					str += ", "
+					str += "\n"
 				}
-				str += c.Cmd + " - " + c.Desc
+				str += "->" + c.Cmd + " - " + c.Desc
 			}
 		}
 		b.SimpleReply(msg, str)
@@ -64,7 +64,7 @@ var about = bot.Command{
 	Chat: true,
 	Run: func(b *bot.Bot, msg *bot.IncomingMessage, _ []string) {
 		b.SimpleReply(msg, fmt.Sprintln(
-			"HwBot\nVersion: debug\n",
+			"HwBot\nVersion: debug\nSource code: github.com/Toffee-iZt/HwBot\n",
 			"\n\nStart time:", start.Format("02 Jan 2006 15:04:05"),
 			"\nUptime:", time.Now().Sub(start).Truncate(time.Second),
 			"\nВерсия API VK:", vkapi.Version,

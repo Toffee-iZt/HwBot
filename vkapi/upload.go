@@ -16,7 +16,7 @@ var photoCache = newCache()
 
 // UploadMessagesPhoto uploads photo from source and returns vk string.
 func (c *Client) UploadMessagesPhoto(peerID int, f fs.File) (string, error) {
-	data, h, err := readHash(f, photoCache)
+	data, fname, h, err := readHash(f, photoCache)
 	if err != nil {
 		return "", err
 	}
@@ -41,7 +41,7 @@ func (c *Client) UploadMessagesPhoto(peerID int, f fs.File) (string, error) {
 		Server int    `json:"server"`
 	}
 
-	err = c.uploadMultipart(&res, mus.UploadURL, "photo", data)
+	err = c.uploadMultipart(&res, mus.UploadURL, "photo", fname, data)
 	if err != nil {
 		return "", err
 	}
@@ -58,12 +58,12 @@ func (c *Client) UploadMessagesPhoto(peerID int, f fs.File) (string, error) {
 }
 
 // uploadMultipart uploads multipart data from file to uploadURL.
-func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, data []byte) error {
+func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data []byte) error {
 	req, resp := shttp.New(shttp.POSTStr, shttp.URIFromString(uploadURL))
 	defer shttp.Release(req, resp)
 
 	writer := multipart.NewWriter(req.BodyWriter())
-	part, _ := writer.CreateFormField(field)
+	part, _ := writer.CreateFormFile(field, fname)
 	_, err := part.Write(data)
 	if err != nil {
 		return err
@@ -80,13 +80,17 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, data 
 	return json.Unmarshal(resp.Body(), dst)
 }
 
-func readHash(f fs.File, c *cache) ([]byte, md5hash, error) {
+func readHash(f fs.File, c *cache) ([]byte, string, md5hash, error) {
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return nil, md5hash{}, err
+		return nil, "", md5hash{}, err
+	}
+	s, err := f.Stat()
+	if err != nil {
+		return nil, "", md5hash{}, err
 	}
 
-	return data, c.hash(data), nil
+	return data, s.Name(), c.hash(data), nil
 }
 
 type md5hash = [md5.Size]byte

@@ -111,15 +111,18 @@ var number = bot.Command{
 }
 
 var who = bot.Command{
-	Cmd:  "кто",
+	Cmd:  "who",
 	Desc: "Выбрать рандомного участника",
-	Help: "/кто <string>",
+	Help: "/who <string>",
 	Chat: true,
 	Priv: false,
 	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
 		members, err := b.API().Messages.GetChatMembers(vkutils.PeerToChat(m.Message.PeerID))
 		if err != nil {
 			b.SimpleReply(m, "У бота недостаточно прав доступа для выполнения команды")
+			return
+		}
+		if len(members.Profiles) == 0 {
 			return
 		}
 
@@ -152,9 +155,9 @@ var flip = bot.Command{
 }
 
 var info = bot.Command{
-	Cmd:  "инфа",
+	Cmd:  "info",
 	Desc: "Вероятность события",
-	Help: "/инфа <событие> - случайная вероятность события",
+	Help: "/info <событие> - случайная вероятность события",
 	Chat: true,
 	Priv: true,
 	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
@@ -169,9 +172,9 @@ var info = bot.Command{
 }
 
 var when = bot.Command{
-	Cmd:  "когда",
+	Cmd:  "when",
 	Desc: "Когда произойдет событие",
-	Help: "/когда <событие> - случайная дата события",
+	Help: "/when <событие> - случайная дата события",
 	Chat: true,
 	Priv: true,
 	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
