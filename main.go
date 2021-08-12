@@ -25,9 +25,6 @@ func main() {
 	println("vkapi version:", vkapi.Version)
 
 	var config struct {
-		Bot struct {
-			Prefixes string
-		}
 		Vk struct {
 			AccessToken string
 		}
@@ -67,7 +64,7 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 
-	b := bot.New(vk, []byte(config.Bot.Prefixes), log.Writer())
+	b := bot.New(vk, log.Writer())
 	if !b.Run(ctx, &builtin.Module, &debug.Module, &random.Module, &yalm.Module, &images.Module) {
 		cancel()
 		return

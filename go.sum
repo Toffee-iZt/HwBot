@@ -12,6 +12,8 @@ github.com/Toffee-iZt/workfs v0.0.0-20210811141545-8de4f092c373 h1:W3w/bvs5ji+06
 github.com/Toffee-iZt/workfs v0.0.0-20210811141545-8de4f092c373/go.mod h1:J/txDsZzIOj19/vVk+GhF399nSyiNJwLaAu9nZrJoOk=
 github.com/Toffee-iZt/workfs v0.0.0-20210811154437-a1f9c3617591 h1:d866si/PcVlIwl+jZrizA2I7Y9welhv1QJzwQiY4qcY=
 github.com/Toffee-iZt/workfs v0.0.0-20210811154437-a1f9c3617591/go.mod h1:J/txDsZzIOj19/vVk+GhF399nSyiNJwLaAu9nZrJoOk=
+github.com/Toffee-iZt/workfs v0.0.0-20210811184819-64a1a0024b36 h1:WQa4SAX8EP7Ui0uID1W14xYLM9j51ZsLmRAM/CzbNIc=
+github.com/Toffee-iZt/workfs v0.0.0-20210811184819-64a1a0024b36/go.mod h1:J/txDsZzIOj19/vVk+GhF399nSyiNJwLaAu9nZrJoOk=
 github.com/andybalholm/brotli v1.0.2 h1:JKnhI/XQ75uFBTiuzXpzFrUriDPiZjlOSzh6wXogP0E=
 github.com/andybalholm/brotli v1.0.2/go.mod h1:loMXtMfwqflxFJPmdbJO0a3KNoPuLBgiu3qAvBg8x/Y=
 github.com/fatih/color v1.12.0 h1:mRhaKNwANqRgUBGKmnI5ZxEk7QXmjQeCcuYFMX2bfcc=

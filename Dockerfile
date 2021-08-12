@@ -1,4 +1,8 @@
-FROM golang:1.16-alpine
+##
+## Build
+##
+
+FROM golang:1.16-alpine AS build
 
 RUN apk add --no-cache --update make
 
@@ -18,4 +22,14 @@ COPY vkapi/ ./vkapi
 
 RUN make
 
-CMD [ "./bin/hwbot" ]
+##
+## Deploy
+##
+
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=build /src/bin ./
+
+ENTRYPOINT [ "./hwbot" ]

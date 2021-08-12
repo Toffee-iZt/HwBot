@@ -1,12 +1,14 @@
 package bot
 
 import (
-	"bytes"
 	"context"
 	"strings"
 
 	"github.com/Toffee-iZt/HwBot/vkapi/longpoll"
 )
+
+// CommandPrefixes are the characters with which commands must begin.
+const CommandPrefixes = "/!"
 
 // IncomingMessage event.
 type IncomingMessage struct {
@@ -39,7 +41,7 @@ func (b *Bot) execCommand(msg *IncomingMessage) {
 
 func (b *Bot) onMessage(ctx context.Context, msg *IncomingMessage) {
 	m := &msg.Message
-	if n := len(m.Text); n > 1 && bytes.IndexByte(b.pref, m.Text[0]) != -1 {
+	if n := len(m.Text); n > 1 && strings.IndexByte(CommandPrefixes, m.Text[0]) != -1 {
 		if n > 300 {
 			m.Text = m.Text[:300]
 		}

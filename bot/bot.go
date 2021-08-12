@@ -10,10 +10,9 @@ import (
 )
 
 // New creates new bot.
-func New(vk *vkapi.Client, pref []byte, w *logger.Writer) *Bot {
+func New(vk *vkapi.Client, w *logger.Writer) *Bot {
 	return &Bot{
 		log:      logger.New(w, "BOT"),
-		pref:     pref,
 		vk:       vk,
 		lp:       longpoll.New(vk, 25),
 		commands: make(map[string]*Command),
@@ -23,8 +22,6 @@ func New(vk *vkapi.Client, pref []byte, w *logger.Writer) *Bot {
 // Bot is vk bot.
 type Bot struct {
 	sync common.Sync
-
-	pref []byte
 
 	log *logger.Logger
 	vk  *vkapi.Client
