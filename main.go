@@ -24,7 +24,7 @@ func main() {
 	println("vkapi version:", vkapi.Version)
 
 	vkAccessToken := os.Getenv("VK_TOKEN")
-	logPath := os.Getenv("LOG")
+	logPath := os.Getenv("LOG_PATH")
 
 	log := logger.New(logger.DefaultWriter, "MAIN")
 	if logPath != "" {
