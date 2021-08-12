@@ -6,7 +6,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/BurntSushi/toml"
 	"github.com/Toffee-iZt/HwBot/bot"
 	"github.com/Toffee-iZt/HwBot/bot/modules/builtin"
 	"github.com/Toffee-iZt/HwBot/bot/modules/debug"
@@ -24,29 +23,12 @@ func main() {
 	println("PID", os.Getpid())
 	println("vkapi version:", vkapi.Version)
 
-	var config struct {
-		Vk struct {
-			AccessToken string
-		}
-		Logger struct {
-			Path string
-		}
-	}
-
-	f, err := workfs.Open("config.toml")
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = toml.DecodeReader(f, &config)
-	if err != nil {
-		panic(err)
-	}
-	f.Close()
+	vkAccessToken := os.Getenv("VK_TOKEN")
+	logPath := os.Getenv("LOG")
 
 	log := logger.New(logger.DefaultWriter, "MAIN")
-	if config.Logger.Path != "" {
-		w, err := logger.NewWriterFile(config.Logger.Path)
+	if logPath != "" {
+		w, err := logger.NewWriterFile(logPath)
 		if err != nil {
 			panic(err)
 		}
@@ -56,7 +38,7 @@ func main() {
 	log.Info("config loaded")
 
 	log.Info("vk authorization")
-	vk, vkerr := vkapi.Auth(config.Vk.AccessToken)
+	vk, vkerr := vkapi.Auth(vkAccessToken)
 	if vkerr != nil {
 		log.Error("vk auth: %s", vkerr.Error())
 		return
