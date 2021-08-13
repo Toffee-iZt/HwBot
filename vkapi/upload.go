@@ -1,38 +1,19 @@
 package vkapi
 
 import (
-	"crypto/md5"
 	"encoding/json"
-	"hash"
 	"io"
 	"io/fs"
 	"mime/multipart"
-	"sync"
 
 	"github.com/Toffee-iZt/HwBot/shttp"
 )
 
-var photoCache = newCache()
-
 // UploadMessagesPhoto uploads photo from source and returns vk string.
 func (c *Client) UploadMessagesPhoto(peerID int, f fs.File) (string, error) {
-	data, fname, h, err := readHash(f, photoCache)
+	mus, err := c.Photos.GetMessagesUploadServer(peerID)
 	if err != nil {
 		return "", err
-	}
-
-	cachedData := photoCache.get(h)
-	cachedData.mut.Lock()
-	defer cachedData.mut.Unlock()
-
-	s := cachedData.val[peerID]
-	if s != "" {
-		return s, nil
-	}
-
-	mus, vkerr := c.Photos.GetMessagesUploadServer(peerID)
-	if vkerr != nil {
-		return "", vkerr
 	}
 
 	var res struct {
@@ -41,32 +22,31 @@ func (c *Client) UploadMessagesPhoto(peerID int, f fs.File) (string, error) {
 		Server int    `json:"server"`
 	}
 
-	err = c.uploadMultipart(&res, mus.UploadURL, "photo", fname, data)
+	err = c.uploadMultipart(&res, mus.UploadURL, "photo", f)
 	if err != nil {
 		return "", err
 	}
 
-	saved, vkerr := c.Photos.SaveMessagesPhoto(res.Server, res.Photo, res.Hash)
-	if vkerr != nil {
-		return "", vkerr
+	saved, err := c.Photos.SaveMessagesPhoto(res.Server, res.Photo, res.Hash)
+	if err != nil {
+		return "", err
 	}
 
-	s = saved[0].String()
-	cachedData.val[peerID] = s
-
-	return s, nil
+	return saved[0].String(), nil
 }
 
 // uploadMultipart uploads multipart data from file to uploadURL.
-func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data []byte) error {
-	req := shttp.New(shttp.POSTStr, shttp.URIFromString(uploadURL))
-
-	writer := multipart.NewWriter(req.BodyWriter())
-	part, _ := writer.CreateFormFile(field, fname)
-	_, err := part.Write(data)
+func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, file fs.File) error {
+	fstat, err := file.Stat()
 	if err != nil {
 		return err
 	}
+
+	req := shttp.New(shttp.POSTStr, shttp.URIFromString(uploadURL))
+
+	writer := multipart.NewWriter(req.BodyWriter())
+	part, _ := writer.CreateFormFile(field, fstat.Name())
+	io.Copy(part, file)
 	writer.Close()
 
 	req.Header.SetContentType(writer.FormDataContentType())
@@ -77,60 +57,4 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname
 	}
 
 	return json.Unmarshal(body, dst)
-}
-
-func readHash(f fs.File, c *cache) ([]byte, string, md5hash, error) {
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return nil, "", md5hash{}, err
-	}
-	s, err := f.Stat()
-	if err != nil {
-		return nil, "", md5hash{}, err
-	}
-
-	return data, s.Name(), c.hash(data), nil
-}
-
-type md5hash = [md5.Size]byte
-
-func newCache() *cache {
-	return &cache{
-		h: md5.New(),
-		c: make(map[md5hash]*cached),
-	}
-}
-
-type cached struct {
-	val map[int]string
-	mut sync.Mutex
-}
-
-type cache struct {
-	h hash.Hash
-	c map[md5hash]*cached
-	m sync.Mutex
-}
-
-func (c *cache) hash(data []byte) md5hash {
-	c.m.Lock()
-	c.h.Reset()
-	c.h.Write(data)
-	var sum md5hash
-	c.h.Sum(sum[:0])
-	c.m.Unlock()
-	return sum
-}
-
-func (c *cache) get(hash md5hash) *cached {
-	c.m.Lock()
-	v := c.c[hash]
-	if v == nil {
-		v = &cached{
-			val: make(map[int]string),
-		}
-		c.c[hash] = v
-	}
-	c.m.Unlock()
-	return v
 }
