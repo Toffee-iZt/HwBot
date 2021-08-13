@@ -69,10 +69,9 @@ func (c *Client) Method(method string, args Args, dst interface{}) error {
 	defer shttp.ReleaseQuery(query)
 
 	uri := apibuilder.Build(query, method)
-	req, resp := shttp.New(shttp.POSTStr, uri)
-	defer shttp.Release(req, resp)
+	req := shttp.New(shttp.POSTStr, uri)
 
-	err := c.client.Do(req, resp)
+	body, err := c.client.Do(req)
 	if err != nil {
 		return &HTTPError{
 			Args:    argMap(args),
@@ -86,7 +85,7 @@ func (c *Client) Method(method string, args Args, dst interface{}) error {
 		Response json.RawMessage `json:"response"`
 	}
 
-	body := resp.SwapBody(nil)
+	
 
 	err = json.Unmarshal(body, &res)
 	if err != nil {

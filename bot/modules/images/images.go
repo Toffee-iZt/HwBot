@@ -25,16 +25,13 @@ var log *logger.Logger
 var dlClient shttp.Client
 
 func dl(url string) (image.Image, error) {
-	req, resp := shttp.New(shttp.GETStr, shttp.URIFromString(url))
-	err := dlClient.Do(req, resp)
+	req := shttp.New(shttp.GETStr, shttp.URIFromString(url))
+	body, err := dlClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	photoData := bytes.NewReader(resp.SwapBody(nil))
-	shttp.Release(req, resp)
-
-	photo, _, err := image.Decode(photoData)
+	photo, _, err := image.Decode(bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

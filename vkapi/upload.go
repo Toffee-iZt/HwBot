@@ -59,8 +59,7 @@ func (c *Client) UploadMessagesPhoto(peerID int, f fs.File) (string, error) {
 
 // uploadMultipart uploads multipart data from file to uploadURL.
 func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data []byte) error {
-	req, resp := shttp.New(shttp.POSTStr, shttp.URIFromString(uploadURL))
-	defer shttp.Release(req, resp)
+	req := shttp.New(shttp.POSTStr, shttp.URIFromString(uploadURL))
 
 	writer := multipart.NewWriter(req.BodyWriter())
 	part, _ := writer.CreateFormFile(field, fname)
@@ -72,12 +71,12 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname
 
 	req.Header.SetContentType(writer.FormDataContentType())
 
-	err = c.client.Do(req, resp)
+	body, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}
 
-	return json.Unmarshal(resp.Body(), dst)
+	return json.Unmarshal(body, dst)
 }
 
 func readHash(f fs.File, c *cache) ([]byte, string, md5hash, error) {

@@ -89,10 +89,8 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
 	for {
 		args.Set("ts", lp.serv.Ts)
 
-		req, resp := shttp.New(shttp.GETStr, uri.Build(args))
-		err := lp.vk.HTTP().DoContext(ctx, req, resp)
-		body := resp.Body()
-		shttp.Release(req, resp)
+		req := shttp.New(shttp.GETStr, uri.Build(args))
+		body, err := lp.vk.HTTP().DoContext(ctx, req)
 		if err != nil {
 			if err != context.Canceled {
 				err = fmt.Errorf("longpoll: %w", err)

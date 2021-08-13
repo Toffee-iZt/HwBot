@@ -12,48 +12,51 @@ type Client struct {
 	fasthttp.Client
 }
 
-// Do performs the given http request and fills the given http response.
-func (c *Client) Do(req *Request, resp *Response) error {
-	return c.Client.Do(req, resp)
+// Do performs the given http request and returns response body.
+func (c *Client) Do(req *Request) ([]byte, error) {
+	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseResponse(resp)
+	err := c.Client.Do(req, resp)
+	if err != nil {
+		return nil, err
+	}
+	b := resp.SwapBody(nil)
+	return b, nil
 }
 
-// DoContext performs the given http request with context and fills the given http response.
-func (c *Client) DoContext(ctx context.Context, req *Request, resp *Response) error {
+// DoContext performs the given http request with context and returns http response.
+func (c *Client) DoContext(ctx context.Context, req *Request) ([]byte, error) {
 	reqCopy := fasthttp.AcquireRequest()
-	respCopy := fasthttp.AcquireResponse()
-
 	req.Header.CopyTo(&reqCopy.Header)
-	req.URI().CopyTo(reqCopy.URI())
 	req.PostArgs().CopyTo(reqCopy.PostArgs())
 	reqCopy.SwapBody(req.SwapBody(nil))
 
+	var body []byte
 	ch := make(chan error)
 	mu := sync.Mutex{}
 
 	go func() {
-		err := c.Client.Do(reqCopy, respCopy)
+		var err error
+		body, err = c.Do(reqCopy)
 		mu.Lock()
 		select {
 		case <-ch: // closed when ctx is done
 		default:
 			req.SwapBody(reqCopy.SwapBody(nil))
-			respCopy.CopyTo(resp)
-
 			ch <- err
 		}
 		fasthttp.ReleaseRequest(reqCopy)
-		fasthttp.ReleaseResponse(respCopy)
 		mu.Unlock()
 	}()
 
 	select {
 	case err := <-ch:
-		return err
+		return body, err
 	case <-ctx.Done():
 		mu.Lock()
 		close(ch)
 		mu.Unlock()
 	}
 
-	return ctx.Err()
+	return nil, ctx.Err()
 }
