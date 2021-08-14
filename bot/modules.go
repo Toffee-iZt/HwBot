@@ -36,14 +36,10 @@ func (b *Bot) Modules() []*Module {
 
 // SimpleReply ...
 func (b *Bot) SimpleReply(m *IncomingMessage, text string) {
-	_, vkerr := b.API().Messages.Send(
-		vkapi.MessagePeer{
-			PeerID: m.Message.PeerID,
-		},
-		vkapi.MessageContent{
-			Message: text,
-		},
-	)
+	_, vkerr := b.API().Messages.Send(vkapi.OutMessage{
+		PeerID:  m.Message.PeerID,
+		Message: text,
+	})
 	if vkerr != nil {
 		c := rt.Caller()
 		b.log.Error("simple reply error: %s %s", vkerr.Error(), c.Function)

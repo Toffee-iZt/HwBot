@@ -1,7 +1,6 @@
 package vkapi
 
 import (
-	"encoding/json"
 	"io"
 	"io/fs"
 	"mime/multipart"
@@ -10,7 +9,7 @@ import (
 )
 
 // UploadMessagesPhoto uploads photo from source and returns vk string.
-func (c *Client) UploadMessagesPhoto(peerID int, f fs.File) (string, error) {
+func (c *Client) UploadMessagesPhoto(peerID ID, f fs.File) (string, error) {
 	mus, err := c.Photos.GetMessagesUploadServer(peerID)
 	if err != nil {
 		return "", err
@@ -56,5 +55,5 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, file 
 		return err
 	}
 
-	return json.Unmarshal(body, dst)
+	return unmarshal(body, dst)
 }

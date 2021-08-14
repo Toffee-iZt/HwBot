@@ -1,20 +1,12 @@
-package vktypes
+package vkapi
 
-import (
-	"encoding/json"
-	"strconv"
-)
+import "encoding/json"
 
 // vk types
 const (
 	AttTypePhoto        = "photo"
 	AttTypeAudioMessage = "audio_message"
 )
-
-func init() {
-	Reg(AttTypePhoto, (*Photo)(nil))
-	Reg(AttTypeAudioMessage, (*AudioMessage)(nil))
-}
 
 // Attachment struct.
 type Attachment struct {
@@ -25,7 +17,7 @@ type Attachment struct {
 // UnmarshalJSON implements json.Unmarshaler interface.
 func (a *Attachment) UnmarshalJSON(data []byte) error {
 	var fvk map[string]json.RawMessage
-	err := json.Unmarshal(data, &fvk)
+	err := unmarshal(data, &fvk)
 	if err != nil {
 		return err
 	}
@@ -35,23 +27,27 @@ func (a *Attachment) UnmarshalJSON(data []byte) error {
 
 	raw := fvk[a.Type]
 
-	a.Object = Alloc(a.Type)
-	if a.Object == nil {
+	switch a.Type {
+	case AttTypePhoto:
+		a.Object = new(Photo)
+	case AttTypeAudioMessage:
+		a.Object = new(AudioMessage)
+	default:
 		a.Object = raw
 		return nil
 	}
 
-	return json.Unmarshal(raw, a.Object)
+	return unmarshal(raw, a.Object)
 }
 
 type attachment struct {
 	AccessKey string `json:"access_key"`
 	ID        int    `json:"id"`
-	OwnerID   int    `json:"owner_id"`
+	OwnerID   ID     `json:"owner_id"`
 }
 
 func (a *attachment) string(typ string) string {
-	s := string(typ) + strconv.Itoa(a.OwnerID) + "_" + strconv.Itoa(a.ID)
+	s := string(typ) + itoa(int(a.OwnerID)) + "_" + itoa(a.ID)
 	if a.AccessKey != "" {
 		s += "_" + a.AccessKey
 	}
@@ -63,7 +59,7 @@ type Photo struct {
 	attachment
 
 	AlbumID int    `json:"album_id"`
-	UserID  int    `json:"user_id"`
+	UserID  UserID `json:"user_id"`
 	Date    int64  `json:"date"`
 	HasTag  bool   `json:"has_tag"`
 	Text    string `json:"text"`

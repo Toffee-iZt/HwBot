@@ -48,15 +48,6 @@ func (b *Bot) onMessage(ctx context.Context, msg *IncomingMessage) {
 		go b.execCommand(msg)
 		return
 	}
-
-	// debug
-	u, err := b.API().Users.Get([]int{m.FromID})
-	if err != nil {
-		b.log.Error(err.Error())
-		return
-	}
-
-	b.log.Info(":::DEBUG:::New message: from: %s %s\n%s", u[0].FirstName, u[0].LastName, m.Text)
 }
 
 func (b *Bot) onCallback(ctx context.Context, cb *CallbackMessage) {}

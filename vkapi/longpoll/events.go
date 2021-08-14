@@ -3,7 +3,7 @@ package longpoll
 import (
 	"encoding/json"
 
-	"github.com/Toffee-iZt/HwBot/vkapi/vktypes"
+	"github.com/Toffee-iZt/HwBot/vkapi"
 )
 
 // Event struct.
@@ -24,18 +24,18 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 	}
 
 	e.Type = update.Type
-	e.Object = vktypes.Alloc(e.Type)
-	if e.Object == nil {
+
+	switch e.Type {
+	case TypeMessageNew:
+		e.Object = new(MessageNew)
+	case TypeMessageEvent:
+		e.Object = new(MessageEvent)
+	default:
 		e.Object = update.Raw
 		return nil
 	}
 
 	return json.Unmarshal(update.Raw, e.Object)
-}
-
-func init() {
-	vktypes.Reg(TypeMessageNew, (*MessageNew)(nil))
-	vktypes.Reg(TypeMessageEvent, (*MessageEvent)(nil))
 }
 
 //
@@ -46,7 +46,7 @@ const (
 
 // MessageNew struct.
 type MessageNew struct {
-	Message    vktypes.Message `json:"message"`
+	Message    vkapi.Message `json:"message"`
 	ClientInfo struct {
 		ButtonActions  []string `json:"button_actions"`
 		Keyboard       bool     `json:"keyboard"`
@@ -58,9 +58,9 @@ type MessageNew struct {
 
 // MessageEvent struct.
 type MessageEvent struct {
-	Payload       interface{} `json:"payload"`
-	EventID       string      `json:"event_id"`
-	ConvMessageID int         `json:"conversation_message_id"`
-	UserID        int         `json:"user_id"`
-	PeerID        int         `json:"peer_id"`
+	Payload       interface{}  `json:"payload"`
+	EventID       string       `json:"event_id"`
+	ConvMessageID int          `json:"conversation_message_id"`
+	UserID        vkapi.UserID `json:"user_id"`
+	PeerID        vkapi.ID     `json:"peer_id"`
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/Toffee-iZt/HwBot/bot"
 	"github.com/Toffee-iZt/HwBot/vkapi"
-	"github.com/Toffee-iZt/HwBot/vkapi/vkutils"
 	"github.com/Toffee-iZt/workfs"
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
@@ -27,7 +26,7 @@ var citgen = bot.Command{
 	Priv: true,
 	Chat: true,
 	Run: func(b *bot.Bot, m *bot.IncomingMessage, a []string) {
-		var fromID int
+		var fromID vkapi.ID
 		var text string
 		var t int64
 		switch {
@@ -72,7 +71,8 @@ var citgen = bot.Command{
 			return
 		}
 
-		_, vkerr := api.Messages.Send(vkapi.MessagePeer{PeerID: m.Message.PeerID}, vkapi.MessageContent{
+		_, vkerr := api.Messages.Send(vkapi.OutMessage{
+			PeerID:     m.Message.PeerID,
 			Attachment: []string{s},
 		})
 		if vkerr != nil {
@@ -82,27 +82,27 @@ var citgen = bot.Command{
 	},
 }
 
-func getNamePhoto(api *vkapi.Client, from int) (string, image.Image, error) {
+func getNamePhoto(api *vkapi.Client, from vkapi.ID) (string, image.Image, error) {
 	var name string
-	var photoCrop string
-	if from < 0 {
-		g, err := api.Groups.GetByID([]int{vkutils.PeerToGroup(from)}, "photo_200")
+	var photo string
+	if from.IsGroup() {
+		g, err := api.Groups.GetByID([]vkapi.GroupID{from.ToGroup()})
 		if err != nil || len(g) == 0 {
 			return "", nil, err
 		}
 		name = g[0].Name
-		photoCrop = g[0].Photo200
+		photo = g[0].Photo200
 	} else {
-		u, err := api.Users.Get([]int{vkutils.PeerToUser(from)}, "photo_200")
+		u, err := api.Users.Get([]vkapi.UserID{from.ToUser()}, "photo_200")
 		if err != nil || len(u) == 0 {
 			return "", nil, err
 		}
 
 		name = u[0].FirstName + " " + u[0].LastName
-		photoCrop = *u[0].Photo200
+		photo = *u[0].Photo200
 	}
 
-	img, err := dl(photoCrop)
+	img, err := dl(photo)
 	if err != nil {
 		return "", nil, err
 	}

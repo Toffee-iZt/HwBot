@@ -110,14 +110,10 @@ var testembed = bot.Command{
 			log.Error("debug upload photo error: %s", err.Error())
 			return
 		}
-		_, vkerr := vk.Messages.Send(
-			vkapi.MessagePeer{
-				PeerID: m.Message.PeerID,
-			},
-			vkapi.MessageContent{
-				Attachment: []string{s},
-			},
-		)
+		_, vkerr := vk.Messages.Send(vkapi.OutMessage{
+			PeerID:     m.Message.PeerID,
+			Attachment: []string{s},
+		})
 		if vkerr != nil {
 			log.Error("debug send photo error: %s", vkerr.Error())
 		}

@@ -3,48 +3,49 @@ package vkutils
 import (
 	"strconv"
 	"strings"
+
+	"github.com/Toffee-iZt/HwBot/vkapi"
 )
 
 // Mention returns vk string mention with text.
-func Mention(id int, text string) string {
+func Mention(id vkapi.ID, text string) string {
 	//if id < 0 {
 	//	return "@public" + itoa(-id) + "(" + text + ")"
 	//}
 	//return "@id" + itoa(id) + "(" + text + ")"
 
 	if id < 0 {
-		return "[club" + strconv.Itoa(-id) + "|" + text + "]"
+		return "[club" + strconv.Itoa(int(id.ToGroup())) + "|" + text + "]"
 	}
-	return "[id" + strconv.Itoa(id) + "|" + text + "]"
+	return "[id" + strconv.Itoa(int(id.ToUser())) + "|" + text + "]"
 }
 
 // ParseMention extract user id and text from vk mention.
-func ParseMention(mention string) (int, string) {
+func ParseMention(mention string) (vkapi.ID, string) {
 	if mention[0] != '[' || mention[len(mention)-1] != ']' {
 		return 0, ""
 	}
-	s := strings.SplitN(mention[1:len(mention)-1], "|", 2)
-	if len(s) != 2 {
+
+	di := strings.IndexByte(mention, '|')
+	if di == -1 {
 		return 0, ""
 	}
+	id, text := mention[1:di], mention[di:len(mention)-1]
 
-	user := strings.Index(s[0], "id") != -1
-
-	var strID string
-	if user {
-		strID = strings.Replace(s[0], "id", "", 1)
+	u := strings.HasPrefix(id, "id")
+	if u {
+		id = id[2:]
 	} else {
-		strID = strings.Replace(s[0], "public", "", 1)
+		id = id[4:]
 	}
-
-	id, err := strconv.Atoi(strID)
+	idint, err := strconv.Atoi(id)
 	if err != nil {
 		return 0, ""
 	}
 
-	if !user {
-		id = -id
+	if !u {
+		idint = -idint
 	}
 
-	return id, s[1]
+	return vkapi.ID(idint), text
 }

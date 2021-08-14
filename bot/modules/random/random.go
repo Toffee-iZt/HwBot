@@ -32,7 +32,7 @@ var list = bot.Command{
 	Chat: true,
 	Priv: false,
 	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
-		members, err := b.API().Messages.GetChatMembers(vkutils.PeerToChat(m.Message.PeerID))
+		members, err := b.API().Messages.GetConversationMembers(m.Message.PeerID)
 		if err != nil {
 			b.SimpleReply(m, "У бота недостаточно прав доступа для выполнения команды")
 			return
@@ -56,7 +56,7 @@ var list = bot.Command{
 		for i := 0; i < num; i++ {
 			n := myRand.Intn(l)
 			u := &users[n]
-			str += strconv.Itoa(i+1) + ". " + vkutils.Mention(u.ID, u.FirstName+" "+u.LastName) + "\n"
+			str += strconv.Itoa(i+1) + ". " + vkutils.Mention(u.ID.ToID(), u.FirstName+" "+u.LastName) + "\n"
 			l--
 			users[n] = users[l]
 		}
@@ -117,18 +117,15 @@ var who = bot.Command{
 	Chat: true,
 	Priv: false,
 	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
-		members, err := b.API().Messages.GetChatMembers(vkutils.PeerToChat(m.Message.PeerID))
+		members, err := b.API().Messages.GetConversationMembers(m.Message.PeerID)
 		if err != nil {
 			b.SimpleReply(m, "У бота недостаточно прав доступа для выполнения команды")
-			return
-		}
-		if len(members.Profiles) == 0 {
 			return
 		}
 
 		r := myRand.Intn(len(members.Profiles))
 		p := members.Profiles[r]
-		str := vkutils.Mention(p.ID, p.FirstName+" "+p.LastName)
+		str := vkutils.Mention(p.ID.ToID(), p.FirstName+" "+p.LastName)
 		if len(args) > 0 {
 			str += " — " + strbytes.Join(args, ' ')
 		}

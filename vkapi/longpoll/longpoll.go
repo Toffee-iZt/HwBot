@@ -28,7 +28,7 @@ type LongPoll struct {
 }
 
 func (lp *LongPoll) update(updateTS bool) error {
-	s, err := lp.vk.Groups.GetLongPollServer()
+	s, err := lp.vk.Groups.GetLongPollServer(lp.vk.Group())
 	if err != nil {
 		return err
 	}
@@ -72,12 +72,6 @@ func (lp *LongPoll) Run(ctx context.Context) <-chan Event {
 	return ch
 }
 
-type response struct {
-	Ts      string  `json:"ts"`
-	Updates []Event `json:"updates"`
-	Failed  int     `json:"failed"`
-}
-
 func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
 	uri := shttp.NewURIBuilder(lp.serv.Server)
 
@@ -99,7 +93,12 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
 			return
 		}
 
-		var res response
+		var res struct {
+			Ts      string  `json:"ts"`
+			Updates []Event `json:"updates"`
+			Failed  int     `json:"failed"`
+		}
+
 		err = json.Unmarshal(body, &res)
 		if err != nil {
 			lp.sync.ErrClose(fmt.Errorf("longpoll json: %w\n%s", err, string(body)))

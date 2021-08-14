@@ -1,10 +1,7 @@
 package vkapi
 
 import (
-	"strconv"
 	"sync/atomic"
-
-	"github.com/Toffee-iZt/HwBot/vkapi/vktypes/keyboard"
 )
 
 // ProvideMessages makes messages provider.
@@ -22,46 +19,34 @@ type MessagesProvider struct {
 	randomID int32
 }
 
-// MessagePeer struct.
-type MessagePeer struct {
-	UserID  int
-	UserIDs []int
-	PeerID  int
-	PeerIDs []int
+// OutMessage struct.
+type OutMessage struct {
+	UserID  UserID
+	UserIDs []UserID
+	PeerID  ID
+	PeerIDs []ID
 	Domain  string
-	ChatID  int
-}
+	ChatID  ChatID
 
-// MessageContent struct.
-type MessageContent struct {
 	Message    string
 	Lat, Long  int
 	Attachment []string
 	StickerID  int
-	Keyboard   *keyboard.Keyboard
+	Keyboard   *Keyboard
 	//Template map[string]interface{}
 	//Payload       map[string]interface{} // ???
 	//ContentSource map[string]interface{} // ???
 
-	Forward struct {
-		ReplyTo         int
-		ForwardMessages []int
-		//Forward common.JSONData
-	}
+	ReplyTo         int
+	ForwardMessages []int
+	//Forward common.JSONData
 
-	Meta struct {
-		DontParseLinks  baseBoolInt
-		DisableMentions baseBoolInt
-
-		//GroupID         int
-
-		//Intent      string // ???
-		//SubscribeID int   // ???
-	}
+	DontParseLinks  boolInt
+	DisableMentions boolInt
 }
 
 // Send sends a message.
-func (m *MessagesProvider) Send(peer MessagePeer, msg MessageContent) (int, error) {
+func (m *MessagesProvider) Send(msg OutMessage) (int, error) {
 	if msg.Message == "" && msg.Attachment == nil {
 		return 0, nil
 	}
@@ -71,34 +56,40 @@ func (m *MessagesProvider) Send(peer MessagePeer, msg MessageContent) (int, erro
 	}
 
 	args := NewArgs()
-	argsSetAny(args, "random_id", int(atomic.AddInt32(&m.randomID, 1)))
+	args.Set("random_id", itoa(int(atomic.AddInt32(&m.randomID, 1))))
 
-	argsSetAny(args, "user_id", peer.UserID)
-	argsSetAny(args, "peer_id", peer.PeerID)
-	argsSetAny(args, "peer_ids", peer.PeerIDs)
-	argsSetAny(args, "domain", peer.Domain)
-	argsSetAny(args, "chat_id", peer.ChatID)
-	argsSetAny(args, "user_ids", peer.UserIDs)
+	args.Set("user_id", itoa(int(msg.UserID)))
+	for _, u := range msg.UserIDs {
+		args.Add("user_ids", itoa(int(u)))
+	}
+	args.Set("peer_id", itoa(int(msg.PeerID)))
+	for _, p := range msg.PeerIDs {
+		args.Add("peer_ids", itoa(int(p)))
+	}
+	args.Set("domain", msg.Domain)
+	args.Set("chat_id", itoa(int(msg.ChatID)))
 
-	argsSetAny(args, "message", msg.Message)
-	argsSetAny(args, "lat", msg.Lat)
-	argsSetAny(args, "long", msg.Long)
-	argsSetAny(args, "attachment", msg.Attachment)
-	argsSetAny(args, "sticker_id", msg.StickerID)
-	argsSetAny(args, "keyboard", msg.Keyboard)
+	args.Set("message", msg.Message)
+	args.Set("lat", itoa(msg.Lat))
+	args.Set("long", itoa(msg.Long))
+	args.Set("attachment", msg.Attachment...)
+	args.Set("sticker_id", itoa(msg.StickerID))
+	args.Set("keyboard", msg.Keyboard.String())
 
-	argsSetAny(args, "reply_to", msg.Forward.ReplyTo)
-	argsSetAny(args, "forward_messages", msg.Forward.ForwardMessages)
+	args.Set("reply_to", itoa(msg.ReplyTo))
+	for _, f := range msg.ForwardMessages {
+		args.Add("peer_ids", itoa(f))
+	}
 
-	argsSetAny(args, "dont_parse_links", msg.Meta.DontParseLinks)
-	argsSetAny(args, "disable_mentions", msg.Meta.DisableMentions)
+	args.Set("dont_parse_links", msg.DontParseLinks.String())
+	args.Set("disable_mentions", msg.DisableMentions.String())
 
 	var id int
 	err := m.client.Method("messages.send", args, &id)
 	return id, err
 }
 
-// Members ...
+// Members struct.
 type Members struct {
 	Items    []Member `json:"items"`
 	Profiles []User   `json:"profiles"`
@@ -106,29 +97,30 @@ type Members struct {
 	Count    int      `json:"count"`
 }
 
-// Member ...
+// Member struct.
 type Member struct {
-	MemberID  int   `json:"member_id"`
-	InvitedBy int   `json:"invited_by"`
+	MemberID  ID    `json:"member_id"`
+	InvitedBy ID    `json:"invited_by"`
 	JoinDate  int64 `json:"join_date"`
 	IsAdmin   bool  `json:"is_admin"`
 	IsOwner   bool  `json:"is_owner"`
 	CanKick   bool  `json:"can_kick"`
 }
 
-// GetChatMembers ...
-func (m *MessagesProvider) GetChatMembers(chatID int) (*Members, error) {
-	args := NewArgs().Set("peer_id", strconv.Itoa(chatID+2e9))
+// GetConversationMembers returns a list of IDs of users participating in a conversation.
+func (m *MessagesProvider) GetConversationMembers(peerID ID) (*Members, error) {
+	args := NewArgs().Set("peer_id", itoa(int(peerID)))
 	var mem Members
 	err := m.client.Method("messages.getConversationMembers", args, &m)
 	return &mem, err
 }
 
-// Kick ...
-func (m *MessagesProvider) Kick(chatID int, memberID int) error {
+// RemoveChatUser allows the current user to leave a chat or, if the current user started the chat,
+// allows the user to remove another user from the chat.
+func (m *MessagesProvider) RemoveChatUser(chatID ChatID, memberID ID) error {
 	args := NewArgs()
-	args.Set("chat_id", strconv.Itoa(chatID))
-	args.Set("member_id", strconv.Itoa(memberID))
+	args.Set("chat_id", itoa(int(chatID)))
+	args.Set("member_id", itoa(int(memberID)))
 	err := m.client.Method("messages.removeChatUser", args, nil)
 	return err
 }

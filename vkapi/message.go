@@ -1,11 +1,11 @@
-package vktypes
+package vkapi
 
-// Message ...
+// Message struct.
 type Message struct {
 	ID            int          `json:"id"`
 	Date          int64        `json:"date"`
-	FromID        int          `json:"from_id"`
-	PeerID        int          `json:"peer_id"`
+	FromID        ID           `json:"from_id"`
+	PeerID        ID           `json:"peer_id"`
 	Text          string       `json:"text"`
 	Attachments   []Attachment `json:"attachments"`
 	Forward       []shortMsg   `json:"fwd_messages"`
@@ -30,8 +30,8 @@ const (
 type shortMsg struct {
 	ID            int          `json:"id"`
 	Date          int64        `json:"date"`
-	FromID        int          `json:"from_id"`
-	PeerID        int          `json:"peer_id"`
+	FromID        ID           `json:"from_id"`
+	PeerID        ID           `json:"peer_id"`
 	Text          string       `json:"text"`
 	Attachments   []Attachment `json:"attachments"`
 	ConvMessageID int          `json:"conversation_message_id"`

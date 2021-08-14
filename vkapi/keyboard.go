@@ -1,43 +1,43 @@
-package keyboard
+package vkapi
 
 import "encoding/json"
 
 //
 const (
-	MaxButtonsOnLine = 5
-	MaxDefaultLines  = 10
-	MaxInlineLines   = 6
+	KeyboardMaxButtonsOnLine = 5
+	KeyboardMaxDefaultLines  = 10
+	KeyboardMaxInlineLines   = 6
 )
 
 //
 const (
 	// VkBlue
-	ColorPrimary = "primary"
+	KeyboardColorPrimary = "primary"
 	// White
-	ColorSecondary = "secondary"
+	KeyboardColorSecondary = "secondary"
 	// Red
-	ColorNegative = "negative"
+	KeyboardColorNegative = "negative"
 	// Green
-	ColorPositive = "positive"
+	KeyboardColorPositive = "positive"
 )
 
 //
 const (
-	ButtonTypeText     = "text"
-	ButtonTypeLocation = "location"
-	ButtonTypeVkPay    = "vkpay"
-	ButtonTypeOpenApp  = "open_app"
-	ButtonTypeOpenLink = "open_link"
-	ButtonTypeCallback = "callback"
+	KeyboardButtonTypeText     = "text"
+	KeyboardButtonTypeLocation = "location"
+	KeyboardButtonTypeVkPay    = "vkpay"
+	KeyboardButtonTypeOpenApp  = "open_app"
+	KeyboardButtonTypeOpenLink = "open_link"
+	KeyboardButtonTypeCallback = "callback"
 )
 
-// Empty creates empty keyboard to remove an existing.
-func Empty() *Keyboard {
-	return New(true, false)
+// EmptyKeyboard creates empty keyboard to remove an existing.
+func EmptyKeyboard() *Keyboard {
+	return NewKeyboard(true, false)
 }
 
-// New creates new keyboard.
-func New(oneTime bool, inline bool) *Keyboard {
+// NewKeyboard creates new keyboard.
+func NewKeyboard(oneTime bool, inline bool) *Keyboard {
 	return &Keyboard{
 		OneTime: oneTime,
 		Inline:  inline,
@@ -46,9 +46,9 @@ func New(oneTime bool, inline bool) *Keyboard {
 
 // Keyboard struct.
 type Keyboard struct {
-	Buttons [][]Button `json:"buttons"`
-	OneTime bool       `json:"one_time"`
-	Inline  bool       `json:"inline"`
+	Buttons [][]KeyboardButton `json:"buttons"`
+	OneTime bool               `json:"one_time"`
+	Inline  bool               `json:"inline"`
 }
 
 func (k *Keyboard) String() string {
@@ -61,25 +61,25 @@ func (k *Keyboard) String() string {
 
 // AddRow adds line of buttons.
 func (k *Keyboard) AddRow() bool {
-	if k.Inline && len(k.Buttons) >= MaxInlineLines {
+	if k.Inline && len(k.Buttons) >= KeyboardMaxInlineLines {
 		return false
 	}
-	if !k.Inline && len(k.Buttons) >= MaxDefaultLines {
+	if !k.Inline && len(k.Buttons) >= KeyboardMaxDefaultLines {
 		return false
 	}
-	k.Buttons = append(k.Buttons, make([]Button, 0, 1))
+	k.Buttons = append(k.Buttons, make([]KeyboardButton, 0, 1))
 	return true
 }
 
-func (k *Keyboard) add(b Button) {
+func (k *Keyboard) add(b KeyboardButton) {
 	r := k.Buttons[len(k.Buttons)-1]
 	l := len(r)
-	max := MaxButtonsOnLine
+	max := KeyboardMaxButtonsOnLine
 	for i := 0; i < l; i++ {
 		switch r[i].Action.Type {
-		case ButtonTypeVkPay:
+		case KeyboardButtonTypeVkPay:
 			max = 1
-		case ButtonTypeLocation, ButtonTypeOpenLink, ButtonTypeOpenApp:
+		case KeyboardButtonTypeLocation, KeyboardButtonTypeOpenLink, KeyboardButtonTypeOpenApp:
 			if max > 2 {
 				max = 2
 			}
@@ -92,10 +92,10 @@ func (k *Keyboard) add(b Button) {
 
 // AddText adds a text button to the last row.
 func (k *Keyboard) AddText(payload string, label string, color string) {
-	k.add(Button{
+	k.add(KeyboardButton{
 		Color: color,
-		Action: Action{
-			Type:    ButtonTypeText,
+		Action: KeyboardAction{
+			Type:    KeyboardButtonTypeText,
 			Payload: payload,
 			Label:   label,
 		},
@@ -104,9 +104,9 @@ func (k *Keyboard) AddText(payload string, label string, color string) {
 
 // AddLocation adds a location button to the last row.
 func (k *Keyboard) AddLocation(payload string) {
-	k.add(Button{
-		Action: Action{
-			Type:    ButtonTypeLocation,
+	k.add(KeyboardButton{
+		Action: KeyboardAction{
+			Type:    KeyboardButtonTypeLocation,
 			Payload: payload,
 		},
 	})
@@ -114,9 +114,9 @@ func (k *Keyboard) AddLocation(payload string) {
 
 // AddVkPay adds a VKPay button to the last row.
 func (k *Keyboard) AddVkPay(payload string, hash string) {
-	k.add(Button{
-		Action: Action{
-			Type:    ButtonTypeVkPay,
+	k.add(KeyboardButton{
+		Action: KeyboardAction{
+			Type:    KeyboardButtonTypeVkPay,
 			Payload: payload,
 			Hash:    hash,
 		},
@@ -125,9 +125,9 @@ func (k *Keyboard) AddVkPay(payload string, hash string) {
 
 // AddOpenApp adds a button with link to the vkapp to the last row.
 func (k *Keyboard) AddOpenApp(payload string, appID, ownerID int, hash string) {
-	k.add(Button{
-		Action: Action{
-			Type:    ButtonTypeOpenApp,
+	k.add(KeyboardButton{
+		Action: KeyboardAction{
+			Type:    KeyboardButtonTypeOpenApp,
 			Payload: payload,
 			AppID:   appID,
 			OwnerID: ownerID,
@@ -138,9 +138,9 @@ func (k *Keyboard) AddOpenApp(payload string, appID, ownerID int, hash string) {
 
 // AddOpenLink adds a button with external link to the last row.
 func (k *Keyboard) AddOpenLink(payload string, link string) {
-	k.add(Button{
-		Action: Action{
-			Type:    ButtonTypeOpenLink,
+	k.add(KeyboardButton{
+		Action: KeyboardAction{
+			Type:    KeyboardButtonTypeOpenLink,
 			Payload: payload,
 			Link:    link,
 		},
@@ -149,24 +149,24 @@ func (k *Keyboard) AddOpenLink(payload string, link string) {
 
 // AddCallback adds a callback text button to the last row.
 func (k *Keyboard) AddCallback(payload string, label string, color string) {
-	k.add(Button{
+	k.add(KeyboardButton{
 		Color: color,
-		Action: Action{
-			Type:    ButtonTypeCallback,
+		Action: KeyboardAction{
+			Type:    KeyboardButtonTypeCallback,
 			Payload: payload,
 			Label:   label,
 		},
 	})
 }
 
-// Button struct.
-type Button struct {
-	Color  string `json:"color,omitempty"`
-	Action Action `json:"action"`
+// KeyboardButton struct.
+type KeyboardButton struct {
+	Color  string         `json:"color,omitempty"`
+	Action KeyboardAction `json:"action"`
 }
 
-// Action struct.
-type Action struct {
+// KeyboardAction struct.
+type KeyboardAction struct {
 	Type    string `json:"type"`
 	Payload string `json:"payload"`
 	Label   string `json:"label,omitempty"`

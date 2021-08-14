@@ -42,7 +42,7 @@ type Client struct {
 	client shttp.Client
 
 	token string
-	group int
+	group GroupID
 
 	Groups   *GroupsProvider
 	Messages *MessagesProvider
@@ -56,7 +56,7 @@ func (c *Client) HTTP() *shttp.Client {
 }
 
 // Group ...
-func (c *Client) Group() int {
+func (c *Client) Group() GroupID {
 	return c.group
 }
 
@@ -85,9 +85,7 @@ func (c *Client) Method(method string, args Args, dst interface{}) error {
 		Response json.RawMessage `json:"response"`
 	}
 
-	
-
-	err = json.Unmarshal(body, &res)
+	err = unmarshal(body, &res)
 	if err != nil {
 		return &JSONError{
 			Args:    argMap(args),
@@ -103,7 +101,7 @@ func (c *Client) Method(method string, args Args, dst interface{}) error {
 		return res.Error
 	}
 
-	err = json.Unmarshal(res.Response, dst)
+	err = unmarshal(res.Response, dst)
 	if err != nil {
 		return &JSONError{
 			Args:    argMap(args),
