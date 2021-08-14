@@ -12,10 +12,10 @@ const Version = "5.120"
 
 var apibuilder = shttp.NewRequestsBuilder("https://api.vk.com", "method", "")
 
-// Auth ...
+// Auth returns vk authorized client.
 func Auth(accessToken string) (*Client, error) {
 	if accessToken == "" {
-		return nil, nil
+		return nil, fmt.Errorf("no access token provided")
 	}
 
 	var c Client
@@ -37,17 +37,17 @@ func Auth(accessToken string) (*Client, error) {
 	return &c, nil
 }
 
-// Client ...
+// Client struct.
 type Client struct {
 	client shttp.Client
-
-	token string
-	group GroupID
 
 	Groups   *GroupsProvider
 	Messages *MessagesProvider
 	Photos   *PhotosProvider
 	Users    *UsersProvider
+
+	token string
+	group GroupID
 }
 
 // HTTP returns http client.
@@ -55,12 +55,12 @@ func (c *Client) HTTP() *shttp.Client {
 	return &c.client
 }
 
-// Group ...
+// Group returns self group id.
 func (c *Client) Group() GroupID {
 	return c.group
 }
 
-// Method ...
+// Method invokes vk method.
 func (c *Client) Method(method string, args Args, dst interface{}) error {
 	args.
 		Set("access_token", c.token).
@@ -117,7 +117,7 @@ type APIProvider struct {
 	client *Client
 }
 
-// Args ...
+// Args contains method arguments.
 type Args struct {
 	q *shttp.Query
 }
@@ -134,7 +134,7 @@ func (a Args) Add(key string, val string) Args {
 	return a
 }
 
-// NewArgs ...
+// NewArgs creates new args instance.
 func NewArgs() Args {
 	return Args{shttp.AcquireQuery()}
 }
