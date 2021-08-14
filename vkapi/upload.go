@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"mime/multipart"
 
+	"github.com/Toffee-iZt/HwBot/common/strbytes"
 	"github.com/Toffee-iZt/HwBot/shttp"
 )
 
@@ -41,7 +42,7 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, file 
 		return err
 	}
 
-	req := shttp.New(shttp.POSTStr, shttp.URIFromString(uploadURL))
+	req := shttp.New(shttp.POSTStr, strbytes.S2b(uploadURL))
 
 	writer := multipart.NewWriter(req.BodyWriter())
 	part, _ := writer.CreateFormFile(field, fstat.Name())

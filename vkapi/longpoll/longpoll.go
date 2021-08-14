@@ -73,7 +73,7 @@ func (lp *LongPoll) Run(ctx context.Context) <-chan Event {
 }
 
 func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
-	uri := shttp.NewURIBuilder(lp.serv.Server)
+	builder := shttp.NewRequestsBuilder(lp.serv.Server)
 
 	args := new(shttp.Query)
 	args.Set("act", "a_check")
@@ -83,7 +83,7 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
 	for {
 		args.Set("ts", lp.serv.Ts)
 
-		req := shttp.New(shttp.GETStr, uri.Build(args))
+		req := builder.Build(shttp.GETStr, args)
 		body, err := lp.vk.HTTP().DoContext(ctx, req)
 		if err != nil {
 			if err != context.Canceled {
@@ -106,20 +106,15 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
 		}
 
 		switch res.Failed {
-		case 0, 1:
-			lp.serv.Ts = res.Ts
-		case 2:
-			err = lp.update(false)
-			args.Set("key", lp.serv.Key)
-		case 3:
-			err = lp.update(true)
-			args.Set("key", lp.serv.Key)
 		default:
-			panic("BUG: failed has unexpected value\n" + string(body))
-		}
-		if err != nil {
-			lp.sync.ErrClose(fmt.Errorf("longpoll update: %w", err))
-			return
+			lp.serv.Ts = res.Ts
+		case 2, 3:
+			err = lp.update(res.Failed == 3)
+			if err != nil {
+				lp.sync.ErrClose(fmt.Errorf("longpoll update: %w", err))
+				return
+			}
+			args.Set("key", lp.serv.Key)
 		}
 
 		for _, u := range res.Updates {

@@ -5,6 +5,7 @@ import (
 	"image"
 
 	"github.com/Toffee-iZt/HwBot/bot"
+	"github.com/Toffee-iZt/HwBot/common/strbytes"
 	"github.com/Toffee-iZt/HwBot/logger"
 	"github.com/Toffee-iZt/HwBot/shttp"
 	"github.com/nfnt/resize"
@@ -25,7 +26,7 @@ var log *logger.Logger
 var dlClient shttp.Client
 
 func dl(url string) (image.Image, error) {
-	req := shttp.New(shttp.GETStr, shttp.URIFromString(url))
+	req := shttp.New(shttp.GETStr, strbytes.S2b(url))
 	body, err := dlClient.Do(req)
 	if err != nil {
 		return nil, err

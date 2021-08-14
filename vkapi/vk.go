@@ -10,7 +10,7 @@ import (
 // Version is a vk api version.
 const Version = "5.120"
 
-var apibuilder = shttp.NewURIBuilder("https://api.vk.com", "method", "")
+var apibuilder = shttp.NewRequestsBuilder("https://api.vk.com", "method", "")
 
 // Auth ...
 func Auth(accessToken string) (*Client, error) {
@@ -68,9 +68,7 @@ func (c *Client) Method(method string, args Args, dst interface{}) error {
 	query := args.q
 	defer shttp.ReleaseQuery(query)
 
-	uri := apibuilder.Build(query, method)
-	req := shttp.New(shttp.POSTStr, uri)
-
+	req := apibuilder.Build(shttp.POSTStr, query, method)
 	body, err := c.client.Do(req)
 	if err != nil {
 		return &HTTPError{
