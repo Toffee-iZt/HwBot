@@ -38,6 +38,9 @@ func EmptyKeyboard() *Keyboard {
 
 // NewKeyboard creates new keyboard.
 func NewKeyboard(oneTime bool, inline bool) *Keyboard {
+	if oneTime && inline {
+		return nil
+	}
 	return &Keyboard{
 		OneTime: oneTime,
 		Inline:  inline,
@@ -71,7 +74,7 @@ func (k *Keyboard) AddRow() bool {
 	return true
 }
 
-func (k *Keyboard) add(b KeyboardButton) {
+func (k *Keyboard) add(b KeyboardButton) bool {
 	r := k.Buttons[len(k.Buttons)-1]
 	l := len(r)
 	max := KeyboardMaxButtonsOnLine
@@ -87,12 +90,14 @@ func (k *Keyboard) add(b KeyboardButton) {
 	}
 	if l < max {
 		k.Buttons[len(k.Buttons)-1] = append(r, b)
+		return true
 	}
+	return false
 }
 
 // AddText adds a text button to the last row.
-func (k *Keyboard) AddText(payload string, label string, color string) {
-	k.add(KeyboardButton{
+func (k *Keyboard) AddText(payload string, label string, color string) bool {
+	return k.add(KeyboardButton{
 		Color: color,
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeText,
@@ -103,8 +108,8 @@ func (k *Keyboard) AddText(payload string, label string, color string) {
 }
 
 // AddLocation adds a location button to the last row.
-func (k *Keyboard) AddLocation(payload string) {
-	k.add(KeyboardButton{
+func (k *Keyboard) AddLocation(payload string) bool {
+	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeLocation,
 			Payload: payload,
@@ -113,8 +118,8 @@ func (k *Keyboard) AddLocation(payload string) {
 }
 
 // AddVkPay adds a VKPay button to the last row.
-func (k *Keyboard) AddVkPay(payload string, hash string) {
-	k.add(KeyboardButton{
+func (k *Keyboard) AddVkPay(payload string, hash string) bool {
+	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeVkPay,
 			Payload: payload,
@@ -124,8 +129,8 @@ func (k *Keyboard) AddVkPay(payload string, hash string) {
 }
 
 // AddOpenApp adds a button with link to the vkapp to the last row.
-func (k *Keyboard) AddOpenApp(payload string, appID, ownerID int, hash string) {
-	k.add(KeyboardButton{
+func (k *Keyboard) AddOpenApp(payload string, appID, ownerID int, hash string) bool {
+	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeOpenApp,
 			Payload: payload,
@@ -137,19 +142,20 @@ func (k *Keyboard) AddOpenApp(payload string, appID, ownerID int, hash string) {
 }
 
 // AddOpenLink adds a button with external link to the last row.
-func (k *Keyboard) AddOpenLink(payload string, link string) {
-	k.add(KeyboardButton{
+func (k *Keyboard) AddOpenLink(payload string, label string, link string) bool {
+	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeOpenLink,
 			Payload: payload,
+			Label:   label,
 			Link:    link,
 		},
 	})
 }
 
 // AddCallback adds a callback text button to the last row.
-func (k *Keyboard) AddCallback(payload string, label string, color string) {
-	k.add(KeyboardButton{
+func (k *Keyboard) AddCallback(payload string, label string, color string) bool {
+	return k.add(KeyboardButton{
 		Color: color,
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeCallback,

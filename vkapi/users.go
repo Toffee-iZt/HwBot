@@ -24,9 +24,18 @@ type User struct {
 	UserOptFields
 }
 
+// name cases
+const (
+	NameCaseNom = "nom"
+	NameCaseGen = "gen"
+	NameCaseDat = "dat"
+	NameCaseAcc = "acc"
+	NameCaseIns = "ins"
+	NameCaseAbl = "abl"
+)
+
 // Get returns detailed information on users.
-// TODO: support name_case
-func (u *UsersProvider) Get(userIds []UserID, fields ...string) ([]User, error) {
+func (u *UsersProvider) Get(userIds []UserID, nameCase string, fields ...string) ([]User, error) {
 	if len(userIds) == 0 {
 		return nil, nil
 	}
@@ -44,6 +53,9 @@ func (u *UsersProvider) Get(userIds []UserID, fields ...string) ([]User, error) 
 		return nil, nil
 	}
 	args.Set("fields", fields...)
+	if nameCase != "" {
+		args.Set("name_case")
+	}
 
 	var users []User
 	err := u.client.Method("users.get", args, &users)
