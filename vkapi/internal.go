@@ -32,6 +32,15 @@ func itoa(a int) string {
 	return strconv.Itoa(a)
 }
 
+func ftoa(a float64) string {
+	return strconv.FormatFloat(a, 'f', 7, 64)
+}
+
+func marshal(dst interface{}) []byte {
+	b, _ := json.Marshal(dst)
+	return b
+}
+
 func unmarshal(data []byte, dst interface{}) error {
 	return json.Unmarshal(data, dst)
 }

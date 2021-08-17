@@ -1,7 +1,5 @@
 package vkapi
 
-import "encoding/json"
-
 //
 const (
 	KeyboardMaxButtonsOnLine = 5
@@ -58,8 +56,7 @@ func (k *Keyboard) String() string {
 	if k == nil {
 		return ""
 	}
-	b, _ := json.Marshal(k)
-	return string(b)
+	return string(marshal(k))
 }
 
 // AddRow adds line of buttons.

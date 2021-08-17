@@ -29,7 +29,7 @@ type OutMessage struct {
 	ChatID  ChatID
 
 	Message    string
-	Lat, Long  int
+	Lat, Long  float64
 	Attachment []string
 	StickerID  int
 	Keyboard   *Keyboard
@@ -70,8 +70,8 @@ func (m *MessagesProvider) Send(msg OutMessage) (int, error) {
 	args.Set("chat_id", itoa(int(msg.ChatID)))
 
 	args.Set("message", msg.Message)
-	args.Set("lat", itoa(msg.Lat))
-	args.Set("long", itoa(msg.Long))
+	args.Set("lat", ftoa(msg.Lat))
+	args.Set("long", ftoa(msg.Long))
 	args.Set("attachment", msg.Attachment...)
 	args.Set("sticker_id", itoa(msg.StickerID))
 	args.Set("keyboard", msg.Keyboard.String())
@@ -87,6 +87,43 @@ func (m *MessagesProvider) Send(msg OutMessage) (int, error) {
 	var id int
 	err := m.client.Method("messages.send", args, &id)
 	return id, err
+}
+
+//
+const (
+	EventDataTypeShowSnackbar = "show_snackbar"
+	EventDataTypeOpenLink     = "open_link"
+	EventDataTypeOpenApp      = "open_app"
+)
+
+// EventData struct.
+type EventData struct {
+	Type string `json:"type"`
+
+	// show_snackbar
+	Text string `json:"text,omitempty"`
+
+	// open_link
+	Link string `json:"link,omitempty"`
+
+	// open_app
+	Hash    string `json:"hash,omitempty"`
+	AppID   int    `json:"app_id,omitempty"`
+	OwnerID int    `json:"owner_id,omitempty"`
+}
+
+// SendMessageEventAnswer sends event answer.
+func (m *MessagesProvider) SendMessageEventAnswer(eventID string, userID UserID, peerID ID, eventData *EventData) error {
+	args := NewArgs()
+	args.Set("event_id", eventID)
+	args.Set("user_id", itoa(int(userID)))
+	args.Set("peer_id", itoa(int(peerID)))
+	if eventData != nil {
+		args.Set("event_data", string(marshal(eventData)))
+	}
+
+	err := m.client.Method("messages.sendMessageEventAnswer", args, nil)
+	return err
 }
 
 // Members struct.

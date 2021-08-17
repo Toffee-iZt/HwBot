@@ -99,6 +99,10 @@ func (c *Client) Method(method string, args Args, dst interface{}) error {
 		return res.Error
 	}
 
+	if dst == nil {
+		return nil
+	}
+
 	err = unmarshal(res.Response, dst)
 	if err != nil {
 		return &JSONError{

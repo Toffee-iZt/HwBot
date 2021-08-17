@@ -1,5 +1,11 @@
 package vkapi
 
+import (
+	"encoding/json"
+
+	"github.com/Toffee-iZt/HwBot/common/strbytes"
+)
+
 // ID is a general id that can point to anything.
 type ID int
 
@@ -65,3 +71,24 @@ type ChatID uint
 func (id ChatID) ToID() ID {
 	return ID(id + 2e9)
 }
+
+// NewJSONData creates new json_data from string.
+func NewJSONData(s string) (JSONData, bool) {
+	ok := json.Valid(strbytes.S2b(s))
+	if !ok {
+		return "{}", false
+	}
+	return JSONData(s), true
+}
+
+// NewJSONDataBytes creates new json_data from bytes slice.
+func NewJSONDataBytes(b []byte) (JSONData, bool) {
+	ok := json.Valid(b)
+	if !ok {
+		return "{}", false
+	}
+	return JSONData(strbytes.B2s(b)), true
+}
+
+// JSONData represents json as string.
+type JSONData string
