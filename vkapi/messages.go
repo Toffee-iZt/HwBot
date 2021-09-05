@@ -4,21 +4,6 @@ import (
 	"sync/atomic"
 )
 
-// ProvideMessages makes messages provider.
-func ProvideMessages(c *Client) *MessagesProvider {
-	return &MessagesProvider{
-		APIProvider: APIProvider{c},
-		randomID:    -(1 << 31),
-	}
-}
-
-// MessagesProvider provides messages api.
-type MessagesProvider struct {
-	APIProvider
-
-	randomID int32
-}
-
 // OutMessage struct.
 type OutMessage struct {
 	UserID  UserID
@@ -28,6 +13,11 @@ type OutMessage struct {
 	Domain  string
 	ChatID  ChatID
 
+	OutMessageContent
+}
+
+// OutMessageContent struct.
+type OutMessageContent struct {
 	Message    string
 	Lat, Long  float64
 	Attachment []string
@@ -41,12 +31,12 @@ type OutMessage struct {
 	ForwardMessages []int
 	//Forward common.JSONData
 
-	DontParseLinks  boolInt
-	DisableMentions boolInt
+	DontParseLinks  bool
+	DisableMentions bool
 }
 
 // Send sends a message.
-func (m *MessagesProvider) Send(msg OutMessage) (int, error) {
+func (c *Client) Send(msg OutMessage) (int, error) {
 	if msg.Message == "" && msg.Attachment == nil {
 		return 0, nil
 	}
@@ -55,16 +45,16 @@ func (m *MessagesProvider) Send(msg OutMessage) (int, error) {
 		msg.Attachment = msg.Attachment[:10]
 	}
 
-	args := NewArgs()
-	args.Set("random_id", itoa(int(atomic.AddInt32(&m.randomID, 1))))
+	args := newArgs()
+	args.Set("random_id", itoa(int(atomic.AddInt32(&c.rndID, 1))))
 
 	args.Set("user_id", itoa(int(msg.UserID)))
-	for _, u := range msg.UserIDs {
-		args.Add("user_ids", itoa(int(u)))
+	for i := range msg.UserIDs {
+		args.Add("user_ids", itoa(int(msg.UserIDs[i])))
 	}
 	args.Set("peer_id", itoa(int(msg.PeerID)))
-	for _, p := range msg.PeerIDs {
-		args.Add("peer_ids", itoa(int(p)))
+	for i := range msg.PeerIDs {
+		args.Add("peer_ids", itoa(int(msg.PeerIDs[i])))
 	}
 	args.Set("domain", msg.Domain)
 	args.Set("chat_id", itoa(int(msg.ChatID)))
@@ -81,12 +71,15 @@ func (m *MessagesProvider) Send(msg OutMessage) (int, error) {
 		args.Add("peer_ids", itoa(f))
 	}
 
-	args.Set("dont_parse_links", msg.DontParseLinks.String())
-	args.Set("disable_mentions", msg.DisableMentions.String())
+	if msg.DontParseLinks {
+		args.Set("dont_parse_links", "1")
+	}
+	if msg.DisableMentions {
+		args.Set("disable_mentions", "1")
+	}
 
 	var id int
-	err := m.client.Method("messages.send", args, &id)
-	return id, err
+	return id, c.method("messages.send", args, &id)
 }
 
 //
@@ -113,8 +106,8 @@ type EventData struct {
 }
 
 // SendMessageEventAnswer sends event answer.
-func (m *MessagesProvider) SendMessageEventAnswer(eventID string, userID UserID, peerID ID, eventData *EventData) error {
-	args := NewArgs()
+func (c *Client) SendMessageEventAnswer(eventID string, userID UserID, peerID ID, eventData *EventData) error {
+	args := newArgs()
 	args.Set("event_id", eventID)
 	args.Set("user_id", itoa(int(userID)))
 	args.Set("peer_id", itoa(int(peerID)))
@@ -122,16 +115,15 @@ func (m *MessagesProvider) SendMessageEventAnswer(eventID string, userID UserID,
 		args.Set("event_data", string(marshal(eventData)))
 	}
 
-	err := m.client.Method("messages.sendMessageEventAnswer", args, nil)
-	return err
+	return c.method("messages.sendMessageEventAnswer", args, nil)
 }
 
 // Members struct.
 type Members struct {
-	Items    []Member `json:"items"`
-	Profiles []User   `json:"profiles"`
-	Groups   []Group  `json:"groups"`
-	Count    int      `json:"count"`
+	Items    []*Member `json:"items"`
+	Profiles []*User   `json:"profiles"`
+	Groups   []*Group  `json:"groups"`
+	Count    int       `json:"count"`
 }
 
 // Member struct.
@@ -145,19 +137,18 @@ type Member struct {
 }
 
 // GetConversationMembers returns a list of IDs of users participating in a conversation.
-func (m *MessagesProvider) GetConversationMembers(peerID ID) (*Members, error) {
-	args := NewArgs().Set("peer_id", itoa(int(peerID)))
+func (c *Client) GetConversationMembers(peerID ID) (*Members, error) {
+	args := newArgs()
+	args.Set("peer_id", itoa(int(peerID)))
 	var mem Members
-	err := m.client.Method("messages.getConversationMembers", args, &m)
-	return &mem, err
+	return &mem, c.method("messages.getConversationMembers", args, &mem)
 }
 
 // RemoveChatUser allows the current user to leave a chat or, if the current user started the chat,
 // allows the user to remove another user from the chat.
-func (m *MessagesProvider) RemoveChatUser(chatID ChatID, memberID ID) error {
-	args := NewArgs()
+func (c *Client) RemoveChatUser(chatID ChatID, memberID ID) error {
+	args := newArgs()
 	args.Set("chat_id", itoa(int(chatID)))
 	args.Set("member_id", itoa(int(memberID)))
-	err := m.client.Method("messages.removeChatUser", args, nil)
-	return err
+	return c.method("messages.removeChatUser", args, nil)
 }

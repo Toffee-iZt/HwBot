@@ -21,6 +21,7 @@ func New(vk *vkapi.Client, wait int) *LongPoll {
 
 // LongPoll struct.
 type LongPoll struct {
+	http shttp.Client
 	vk   *vkapi.Client
 	serv *vkapi.LongPollServer
 	wait string
@@ -28,7 +29,7 @@ type LongPoll struct {
 }
 
 func (lp *LongPoll) update(updateTS bool) error {
-	s, err := lp.vk.Groups.GetLongPollServer(lp.vk.Group())
+	s, err := lp.vk.GetLongPollServer(lp.vk.Self().ID)
 	if err != nil {
 		return err
 	}
@@ -84,12 +85,16 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
 		args.Set("ts", lp.serv.Ts)
 
 		req := builder.Build(shttp.GETStr, args)
-		body, err := lp.vk.HTTP().DoContext(ctx, req)
-		if err != nil {
+		status, body, err := lp.vk.HTTP().DoContext(ctx, req)
+		if err != nil || status != shttp.StatusOK {
 			if err != context.Canceled {
 				err = fmt.Errorf("longpoll: %w", err)
 			}
-			lp.sync.ErrClose(err)
+			lp.sync.ErrClose(&vkapi.Error{
+				Message:    err.Error(),
+				HTTPStatus: status,
+				Body:       body,
+			})
 			return
 		}
 

@@ -72,7 +72,7 @@ func (k *Keyboard) AddRow() bool {
 }
 
 func (k *Keyboard) add(b KeyboardButton) bool {
-	r := k.Buttons[len(k.Buttons)-1]
+	r := append(k.Buttons[len(k.Buttons)-1], b)
 	l := len(r)
 	max := KeyboardMaxButtonsOnLine
 	for i := 0; i < l; i++ {
@@ -85,11 +85,11 @@ func (k *Keyboard) add(b KeyboardButton) bool {
 			}
 		}
 	}
-	if l < max {
-		k.Buttons[len(k.Buttons)-1] = append(r, b)
-		return true
+	if l > max {
+		return false
 	}
-	return false
+	k.Buttons[len(k.Buttons)-1] = append(r, b)
+	return true
 }
 
 // AddText adds a text button to the last row.

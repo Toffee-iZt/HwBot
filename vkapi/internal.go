@@ -3,29 +3,20 @@ package vkapi
 import (
 	"encoding/json"
 	"strconv"
+
+	"github.com/Toffee-iZt/HwBot/shttp"
 )
 
-type boolInt bool
-
-func (b boolInt) MarshalJSON() ([]byte, error) {
-	if b {
-		return []byte{'1'}, nil
-	}
-	return []byte{'0'}, nil
+type args struct {
+	*shttp.Query
 }
 
-func (b boolInt) String() string {
-	if b {
-		return "1"
-	}
-	return "0"
+func newArgs() args {
+	return args{shttp.AcquireQuery()}
 }
 
-func (b *boolInt) UnmarshalJSON(data []byte) error {
-	if string(data) != "0" {
-		*b = true
-	}
-	return nil
+func releaseArgs(a args) {
+	shttp.ReleaseQuery(a.Query)
 }
 
 func itoa(a int) string {
@@ -35,6 +26,8 @@ func itoa(a int) string {
 func ftoa(a float64) string {
 	return strconv.FormatFloat(a, 'f', 7, 64)
 }
+
+type jsonRaw json.RawMessage
 
 func marshal(dst interface{}) []byte {
 	b, _ := json.Marshal(dst)

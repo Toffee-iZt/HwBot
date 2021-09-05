@@ -11,7 +11,7 @@ import (
 
 // UploadMessagesPhoto uploads photo from source and returns vk string.
 func (c *Client) UploadMessagesPhoto(peerID ID, f fs.File) (string, error) {
-	mus, err := c.Photos.GetMessagesUploadServer(peerID)
+	mus, err := c.PhotosGetMessagesUploadServer(peerID)
 	if err != nil {
 		return "", err
 	}
@@ -27,7 +27,7 @@ func (c *Client) UploadMessagesPhoto(peerID ID, f fs.File) (string, error) {
 		return "", err
 	}
 
-	saved, err := c.Photos.SaveMessagesPhoto(res.Server, res.Photo, res.Hash)
+	saved, err := c.PhotosSaveMessagesPhoto(res.Server, res.Photo, res.Hash)
 	if err != nil {
 		return "", err
 	}
@@ -51,7 +51,7 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, file 
 
 	req.Header.SetContentType(writer.FormDataContentType())
 
-	body, err := c.client.Do(req)
+	_, body, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}

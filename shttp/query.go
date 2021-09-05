@@ -4,8 +4,7 @@ package shttp
 
 import (
 	"sync"
-
-	"github.com/Toffee-iZt/HwBot/common/strbytes"
+	"unsafe"
 )
 
 // AcquireQuery returns an empty Query instance from query pool.
@@ -49,7 +48,7 @@ func (q *Query) VisitAll(f func([]byte, []byte)) {
 // String returns string representation of query.
 func (q *Query) String() string {
 	q.buf = q.AppendBytes(q.buf[:0])
-	return strbytes.B2s(q.buf)
+	return *(*string)(unsafe.Pointer(&q.buf))
 }
 
 // AppendBytes appends query string to dst and returns the extended dst.
@@ -67,7 +66,7 @@ func (q *Query) AppendBytes(dst []byte) []byte {
 				case c == ' ':
 					dst = append(dst, '+')
 				case escapeTable[int(c)] != 0:
-					dst = append(dst, '%', upperHex[c>>4], upperHex[c&0xf])
+					dst = append(dst, '%', hex[c>>4], hex[c&0xf])
 				default:
 					dst = append(dst, c)
 				}
@@ -75,28 +74,6 @@ func (q *Query) AppendBytes(dst []byte) []byte {
 		}
 	}
 	return dst
-}
-
-// CalculateLength calculates length of finally query string.
-func (q *Query) CalculateLength() int {
-	l := 0
-	for i, n := 0, len(q.args); i < n; i++ {
-		kv := &q.args[i]
-		if i > 0 {
-			l++
-		}
-		l += len(kv.key)
-		if kv.has {
-			l++
-			for _, c := range kv.val {
-				l++
-				if escapeTable[int(c)] != 0 {
-					l += 2
-				}
-			}
-		}
-	}
-	return l
 }
 
 func (q *Query) forceAppendArg(key, val string, has bool) {
@@ -193,7 +170,7 @@ func (q *Query) Add(key string, value string) {
 	q.forceAppendArg(key, value, true)
 }
 
-const upperHex = "0123456789ABCDEF"
+const hex = "0123456789ABCDEF"
 const escapeTable = "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01" +
 	"\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x01\x01\x01\x01" +
 	"\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x01\x01\x00" +

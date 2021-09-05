@@ -1,7 +1,5 @@
 package vkapi
 
-import "encoding/json"
-
 // vk types
 const (
 	AttTypePhoto        = "photo"
@@ -10,34 +8,9 @@ const (
 
 // Attachment struct.
 type Attachment struct {
-	Object interface{}
-	Type   string
-}
-
-// UnmarshalJSON implements json.Unmarshaler interface.
-func (a *Attachment) UnmarshalJSON(data []byte) error {
-	var fvk map[string]json.RawMessage
-	err := unmarshal(data, &fvk)
-	if err != nil {
-		return err
-	}
-
-	a.Type = string(fvk["type"])
-	a.Type = a.Type[1 : len(a.Type)-1] // remove quotes
-
-	raw := fvk[a.Type]
-
-	switch a.Type {
-	case AttTypePhoto:
-		a.Object = new(Photo)
-	case AttTypeAudioMessage:
-		a.Object = new(AudioMessage)
-	default:
-		a.Object = raw
-		return nil
-	}
-
-	return unmarshal(raw, a.Object)
+	Photo        *Photo
+	AudioMessage *AudioMessage
+	Type         string
 }
 
 type attachment struct {

@@ -92,3 +92,20 @@ func NewJSONDataBytes(b []byte) (JSONData, bool) {
 
 // JSONData represents json as string.
 type JSONData string
+
+// BoolInt is bool as 0 or 1.
+type BoolInt bool
+
+// MarshalJSON implements json.Marshaler.
+func (b BoolInt) MarshalJSON() ([]byte, error) {
+	if b {
+		return []byte{'1'}, nil
+	}
+	return []byte{'0'}, nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (b *BoolInt) UnmarshalJSON(data []byte) error {
+	*b = string(data) != "0"
+	return nil
+}
