@@ -2,6 +2,8 @@ package bot
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	"github.com/Toffee-iZt/HwBot/common"
 	"github.com/Toffee-iZt/HwBot/logger"
@@ -10,12 +12,12 @@ import (
 )
 
 // New creates new bot.
-func New(vk *vkapi.Client, w *logger.Writer) *Bot {
+func New(vk *vkapi.Client, l *logger.Logger) *Bot {
 	return &Bot{
-		log:      logger.New(w, "BOT"),
+		log:      l,
 		vk:       vk,
-		lp:       longpoll.New(vk, 25),
-		commands: make(map[string]*Command),
+		lp:       longpoll.New(vk),
+		commands: make(map[string]*command),
 	}
 }
 
@@ -23,12 +25,39 @@ func New(vk *vkapi.Client, w *logger.Writer) *Bot {
 type Bot struct {
 	sync common.Sync
 
-	log *logger.Logger
-	vk  *vkapi.Client
-	lp  *longpoll.LongPoll
+	log    *logger.Logger
+	modlog *logger.Logger
+	vk     *vkapi.Client
+	lp     *longpoll.LongPoll
 
-	commands map[string]*Command
-	modules  []*Module
+	modules []*Module
+
+	commands map[string]*command
+}
+
+type command struct {
+	*Command
+	*Module
+}
+
+// Module struct.
+type Module struct {
+	Name      string
+	Init      func(*logger.Logger) bool
+	Terminate func()
+	Commands  []*Command
+	log       *logger.Logger
+}
+
+// Command respresents conversation command.
+type Command struct {
+	Run         func(*Context, *NewMessage, []string)
+	Cmd         []string
+	Description string
+	Help        string
+	InPrivate   bool
+	InChat      bool
+	NoPrefix    bool
 }
 
 func (b *Bot) close(err error) {
@@ -56,30 +85,112 @@ func (b *Bot) Err() error {
 }
 
 // Run starts bot.
-func (b *Bot) Run(ctx context.Context, mods ...*Module) bool {
+func (b *Bot) Run(ctx context.Context, sync bool, mods ...*Module) error {
 	if !b.sync.Init() {
-		return false
+		return errors.New("bot is already running")
 	}
+
+	b.modules = make([]*Module, 0, len(mods))
 
 	b.log.Info("loading modules")
-	modlog := b.log.Child("MODULES")
+	b.modlog = b.log.Child("MODULES")
 	for _, m := range mods {
-		b.initModule(m, modlog)
+		m.log = b.modlog.Child(m.Name)
+		if m.Init != nil && !m.Init(m.log) {
+			b.modlog.Warn(`module "%s" init failed`, m.Name)
+			continue
+		}
+
+		for _, cmd := range m.Commands {
+			c := &command{
+				Command: cmd,
+				Module:  m,
+			}
+			for _, alias := range cmd.Cmd {
+				b.commands[alias] = c
+			}
+		}
+		b.modules = append(b.modules, m)
+		b.modlog.Info(`module "%s" inited`, m.Name)
 	}
 
+	if sync {
+		b.run(ctx)
+		return b.Err()
+	}
 	go b.run(ctx)
-	return true
+	return nil
 }
 
 func (b *Bot) run(ctx context.Context) {
-	ch := b.lp.Run(ctx)
+	ch := b.lp.Run(ctx, 25)
 	for {
 		select {
 		case e := <-ch:
-			b.handle(ctx, e)
+			go b.handle(ctx, e)
 		case <-b.lp.Done():
 			b.close(b.lp.Err())
 			return
 		}
 	}
+}
+
+func (b *Bot) handle(ctx context.Context, e longpoll.Event) {
+	switch e.Type {
+	case longpoll.TypeMessageEvent:
+		// TODO
+		//cbNew := e.Object.(*longpoll.MessageEvent)
+		//p, err := events.ParsePayload(cbNew.Payload)
+		//if err != nil || p == nil || p.Module == "" {
+		//	b.log.Warn("parsing message payload: empty or invalid format\n%d in %d\n%s", cbNew.UserID, cbNew.PeerID, string(cbNew.Payload))
+		//}
+		//mod, ok := b.modules[p.Module]
+		//if !ok {
+		//	b.log.Warn("parsing message payload: invalid module name\n%d in %d\n%s", cbNew.UserID, cbNew.PeerID, string(cbNew.Payload))
+		//}
+		//mod.Process()
+	case longpoll.TypeMessageNew:
+		msgNew := e.Object.(*longpoll.MessageNew)
+
+		cmd, args := b.getCommand(&msgNew.Message)
+		if cmd == nil {
+			return
+		}
+
+		bctx := makeContext(b, msgNew.Message.PeerID, cmd)
+
+		id := int(msgNew.Message.PeerID)
+		if id > 2e9 && !cmd.InChat || id < 2e9 && !cmd.InPrivate {
+			bctx.ReplyText("Команда не доступна в данном типе чата")
+		}
+
+		cmd.Run(bctx, msgNew, args)
+	}
+}
+
+// CommandPrefixes are the characters with which commands must begin.
+const CommandPrefixes = "/!"
+
+func (b *Bot) getCommand(msg *longpoll.Message) (*command, []string) {
+	if n := len(msg.Text); n > 1 && strings.IndexByte(CommandPrefixes, msg.Text[0]) != -1 {
+		if n > 300 {
+			msg.Text = msg.Text[:300]
+		}
+		s := strings.Split(msg.Text, " ")
+		c := b.commands[s[0][1:]]
+		if isuser := msg.PeerID < 2e9; c != nil && !(!c.InPrivate && isuser || !c.InChat && !isuser) {
+			return c, s[1:]
+		}
+	}
+	return nil, nil
+}
+
+// ModList returns loaded modules list.
+func (b *Bot) ModList() []*Module {
+	return b.modules
+}
+
+// API returns vk api instance.
+func (b *Bot) API() *vkapi.Client {
+	return b.vk
 }

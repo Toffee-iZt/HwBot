@@ -11,13 +11,12 @@ import (
 	"github.com/Toffee-iZt/HwBot/common/format"
 	"github.com/Toffee-iZt/HwBot/common/rt"
 	"github.com/Toffee-iZt/HwBot/logger"
-	"github.com/Toffee-iZt/HwBot/vkapi"
 )
 
 // Module ...
 var Module = bot.Module{
 	Name: "debug",
-	Init: func(_ *bot.Bot, l *logger.Logger) bool {
+	Init: func(l *logger.Logger) bool {
 		log = l
 		log.Info("log test")
 		return true
@@ -28,29 +27,29 @@ var Module = bot.Module{
 		&ping,
 		&testembed,
 		&vkslow,
+		//&keyboard,
 	},
 }
 
 var log *logger.Logger
 
 var debug = bot.Command{
-	Cmd:  "debug",
-	Desc: "debug",
-	Help: "/debug [gc] - информация об используемой памяти (аргумент gc запустит полную сборку мусора)",
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
+	Cmd:         []string{"debug"},
+	Description: "debug",
+	Help:        "/debug [gc] - информация об используемой памяти (аргумент gc запустит полную сборку мусора)",
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var gc bool
-		if len(args) > 0 {
-			switch args[0] {
+		if len(a) > 0 {
+			switch a[0] {
 			case "obj":
-				b.SimpleReply(m, marshalObj(m))
-				return
+				ctx.ReplyText(marshalObj(msg))
 			case "gc":
 				gc = true
 			}
 		}
-		b.SimpleReply(m, memStats(gc))
+		ctx.ReplyText(memStats(gc))
 	},
 }
 
@@ -79,13 +78,13 @@ func memStats(gc bool) string {
 }
 
 var ping = bot.Command{
-	Cmd:  "ping",
-	Desc: "Проверка работоспособности бота",
-	Help: "",
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
-		b.SimpleReply(m, "понг")
+	Cmd:         []string{"ping"},
+	Description: "Проверка работоспособности бота",
+	Help:        "",
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+		ctx.ReplyText("понг")
 	},
 }
 
@@ -93,50 +92,93 @@ var ping = bot.Command{
 var resFs embed.FS
 
 var testembed = bot.Command{
-	Cmd:  "embed",
-	Desc: "Test embed",
-	Help: "",
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
+	Cmd:         []string{"embed"},
+	Description: "Test embed",
+	Help:        "",
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		f, err := resFs.Open("resources/gopher.png")
 		if err != nil {
-			b.SimpleReply(m, err.Error())
-			return
+			ctx.ReplyText(err.Error())
 		}
-		vk := b.API()
-		s, err := vk.UploadMessagesPhoto(m.Message.PeerID, f)
+		stat, err := f.Stat()
 		if err != nil {
-			log.Error("debug upload photo error: %s", err.Error())
+			ctx.ReplyText(err.Error())
+		}
+		s, err := ctx.UploadAttachment(stat.Name(), f)
+		if err != nil {
+			log.Error("upload photo error: %s", err.Error())
 			return
 		}
-		_, vkerr := vk.Messages.Send(vkapi.OutMessage{
-			PeerID:     m.Message.PeerID,
-			Attachment: []string{s},
-		})
-		if vkerr != nil {
-			log.Error("debug send photo error: %s", vkerr.Error())
-		}
+		ctx.Reply("", s)
 	},
 }
 
 var vkslow = bot.Command{
-	Cmd:  "vkslow",
-	Desc: "",
-	Help: "",
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
+	Cmd:         []string{"vkslow"},
+	Description: "",
+	Help:        "",
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		n := time.Now().Unix()
-		p := n - m.Message.Date
+		p := n - msg.Message.Date
 		if p <= 2 {
-			b.SimpleReply(m, "Ok. Vk time <2s")
+			ctx.ReplyText("Ok. Vk time <2s")
 			return
 		}
 		s := fmt.Sprintf(`Vk is slow.
 		Time - %d
 		Event time - %d
-		Receive time - %d`, p, m.Message.Date, n)
-		b.SimpleReply(m, s)
+		Receive time - %d`, p, msg.Message.Date, n)
+		ctx.ReplyText(s)
 	},
 }
+
+/*
+var keyboard = bot.Command{
+	Cmd:  []string{"kb"},
+	Description: "test keyboard",
+	Help: "",
+	InChat: true,
+	InPrivate: true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+		var inline, onetime bool
+		if len(a) > 0 {
+			inline = a[0] == "inline"
+		}
+		if len(a) > 1 {
+			onetime = a[1] == "onetime"
+		}
+
+		kb := vkapi.NewKeyboard(onetime, inline)
+		kb.AddRow()
+		kb.AddLocation(`{"tap": "location"}`)
+		kb.AddRow()
+		kb.AddText(`{"tap": "text"}`, "LABEL", vkapi.KeyboardColorPositive)
+		kb.AddCallback(`{"tap": "cb"}`, "CB", vkapi.KeyboardColorPrimary)
+
+		b.NewCallback(`{"tap": "cb"}`, func(c *bot.CallbackMessage) {
+			b.API().Messages.SendMessageEventAnswer(
+				c.EventID,
+				c.UserID,
+				c.PeerID,
+				&vkapi.EventData{
+					Type: vkapi.EventDataTypeShowSnackbar,
+					Text: "cool",
+				})
+			log.Info("callback tapped")
+		})
+
+		_, err := b.API().Messages.Send(vkapi.OutMessage{
+			PeerID:   m.Message.PeerID,
+			Message:  "testing keyborad",
+			Keyboard: kb,
+		})
+		if err != nil {
+			log.Error(err.Error())
+		}
+	},
+}
+*/

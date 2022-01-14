@@ -7,41 +7,25 @@ import (
 	"strconv"
 
 	"github.com/Toffee-iZt/HwBot/common"
-	"github.com/Toffee-iZt/HwBot/shttp"
 	"github.com/Toffee-iZt/HwBot/vkapi"
+	"github.com/Toffee-iZt/HwBot/vkapi/vkhttp"
 )
 
 // New creates new longpoll instance.
-func New(vk *vkapi.Client, wait int) *LongPoll {
+func New(vk *vkapi.Client) *LongPoll {
 	return &LongPoll{
-		vk:   vk,
-		wait: strconv.Itoa(wait),
+		vk: vk,
 	}
 }
 
 // LongPoll struct.
 type LongPoll struct {
-	http shttp.Client
 	vk   *vkapi.Client
-	serv *vkapi.LongPollServer
-	wait string
 	sync common.Sync
 }
 
-func (lp *LongPoll) update(updateTS bool) error {
-	s, err := lp.vk.GetLongPollServer(lp.vk.Self().ID)
-	if err != nil {
-		return err
-	}
-	if lp.serv == nil {
-		lp.serv = s
-		return nil
-	}
-	lp.serv.Key = s.Key
-	if updateTS {
-		lp.serv.Ts = s.Ts
-	}
-	return nil
+func (lp *LongPoll) update() (*vkapi.LongPollServer, error) {
+	return lp.vk.GetLongPollServer(lp.vk.Self().ID)
 }
 
 // Done returns a channel that closes when the longpoll is finished
@@ -56,37 +40,36 @@ func (lp *LongPoll) Err() error {
 }
 
 // Run runs longpoll in new goroutine.
-func (lp *LongPoll) Run(ctx context.Context) <-chan Event {
+func (lp *LongPoll) Run(ctx context.Context, wait int) <-chan Event {
 	if !lp.sync.Init() {
 		return nil
 	}
 
-	err := lp.update(true)
-	if err != nil {
-		lp.sync.ErrClose(fmt.Errorf("longpoll init server: %w", err))
-		return nil
-	}
-
 	ch := make(chan Event)
-	go lp.run(ctx, ch)
+	go lp.run(ctx, ch, wait)
 
 	return ch
 }
 
-func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
-	builder := shttp.NewRequestsBuilder(lp.serv.Server)
+func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
+	serv, err := lp.update()
+	if err != nil {
+		lp.sync.ErrClose(fmt.Errorf("longpoll init server: %w", err))
+	}
 
-	args := new(shttp.Query)
-	args.Set("act", "a_check")
-	args.Set("wait", lp.wait)
-	args.Set("key", lp.serv.Key)
+	builder := vkhttp.NewRequestsBuilder(serv.Server)
+	args := vkhttp.Args{
+		"act":  "a_check",
+		"wait": strconv.Itoa(wait),
+		"key":  serv.Key,
+		"ts":   serv.Ts,
+	}
 
 	for {
-		args.Set("ts", lp.serv.Ts)
+		req := builder.Build(args)
 
-		req := builder.Build(shttp.GETStr, args)
 		status, body, err := lp.vk.HTTP().DoContext(ctx, req)
-		if err != nil || status != shttp.StatusOK {
+		if err != nil || status != vkhttp.StatusOK {
 			if err != context.Canceled {
 				err = fmt.Errorf("longpoll: %w", err)
 			}
@@ -112,14 +95,17 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event) {
 
 		switch res.Failed {
 		default:
-			lp.serv.Ts = res.Ts
+			args["ts"] = res.Ts
 		case 2, 3:
-			err = lp.update(res.Failed == 3)
+			serv, err = lp.update()
 			if err != nil {
 				lp.sync.ErrClose(fmt.Errorf("longpoll update: %w", err))
 				return
 			}
-			args.Set("key", lp.serv.Key)
+			args["key"] = serv.Key
+			if res.Failed == 3 {
+				args["ts"] = serv.Ts
+			}
 		}
 
 		for _, u := range res.Updates {

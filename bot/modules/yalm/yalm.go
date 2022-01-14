@@ -13,7 +13,7 @@ import (
 // Module ...
 var Module = bot.Module{
 	Name: "yalm",
-	Init: func(_ *bot.Bot, l *logger.Logger) bool {
+	Init: func(l *logger.Logger) bool {
 		log = l
 		client = balaboba.New()
 		err := client.Options()
@@ -45,39 +45,34 @@ const help = `
 /yalm styles - список стилей генерации текста`
 
 var yalm = bot.Command{
-	Cmd:  "yalm",
-	Desc: "yandex balaboba (yalm)",
-	Help: balaboba.About + help,
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, a []string) {
+	Cmd:         []string{"yalm"},
+	Description: "yandex balaboba (yalm)",
+	Help:        balaboba.About + help,
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		if len(a) == 0 {
-			b.SimpleReply(m, help)
-			return
+			ctx.ReplyText(help)
 		}
 		switch a[0] {
 		case "warns":
-			b.SimpleReply(m, warns)
-			return
+			ctx.ReplyText(warns)
 		case "styles":
 			intros, err := client.Intros()
 			if err != nil {
 				log.Error("yalm intros error: ", err.Error())
-				b.SimpleReply(m, pErr)
-				return
+				ctx.ReplyText(pErr)
 			}
 			if intros.Error != 0 {
 				log.Error("yalm intros response error: ", err.Error())
-				b.SimpleReply(m, fmt.Sprintf(apiErrorFmt, "api/yalm/intros", intros.Error))
-				return
+				ctx.ReplyText(fmt.Sprintf(apiErrorFmt, "api/yalm/intros", intros.Error))
 			}
 			msg := "Стили генерации текста\n"
 			for i := range intros.Intros {
 				s := intros.Intros[i]
 				msg += fmt.Sprintf("\n%d - %s - %s", s.Style, s.String, s.Description)
 			}
-			b.SimpleReply(m, msg)
-			return
+			ctx.ReplyText(msg)
 		}
 
 		var s balaboba.Style
@@ -92,25 +87,21 @@ var yalm = bot.Command{
 
 		query := strings.Join(a, " ")
 		if query == "" {
-			b.SimpleReply(m, help)
-			return
+			ctx.ReplyText(help)
 		}
 
 		g, err := client.Get(query, s)
 		if err != nil {
 			log.Error("balaboba get error: %s", err.Error())
-			b.SimpleReply(m, pErr)
-			return
+			ctx.ReplyText(pErr)
 		}
 		if g.Error != 0 {
 			log.Error("balaboba get response error:", g.Error)
-			b.SimpleReply(m, fmt.Sprintf(apiErrorFmt, "api/yalm/text3", g.Error))
-			return
+			ctx.ReplyText(fmt.Sprintf(apiErrorFmt, "api/yalm/text3", g.Error))
 		}
 		if g.BadQuery != 0 {
-			b.SimpleReply(m, balaboba.BadQuery)
-			return
+			ctx.ReplyText(balaboba.BadQuery)
 		}
-		b.SimpleReply(m, g.Query+" "+g.Text)
+		ctx.ReplyText(g.Query + " " + g.Text)
 	},
 }

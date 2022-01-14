@@ -24,21 +24,18 @@ const (
 
 // UsersGet returns detailed information on users.
 func (c *Client) UsersGet(userIds []UserID, nameCase string, fields ...string) ([]*User, error) {
-	if len(userIds) == 0 {
-		return nil, nil
+	args := vkargs{
+		"user_ids": userIds,
 	}
-
-	args := newArgs()
-	for i := range userIds {
-		args.Add("user_ids", itoa(int(userIds[i])))
+	if len(fields) != 0 {
+		args["fields"] = fields
 	}
-	args.Set("fields", fields...)
 	if nameCase != "" {
-		args.Set("name_case")
+		args["name_case"] = nameCase
 	}
 
 	var users []*User
-	return users, c.method("users.get", args, &users)
+	return users, c.method(&users, "users.get", args)
 }
 
 // UserOptFields struct.

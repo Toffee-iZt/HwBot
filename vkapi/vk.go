@@ -3,8 +3,9 @@ package vkapi
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
-	"github.com/Toffee-iZt/HwBot/shttp"
+	"github.com/Toffee-iZt/HwBot/vkapi/vkhttp"
 )
 
 // Version is a vk api version.
@@ -17,7 +18,7 @@ func Auth(accessToken string) (*Client, error) {
 	}
 
 	c := Client{
-		api:   shttp.NewRequestsBuilder("https://api.vk.com", "method", ""),
+		api:   vkhttp.NewRequestsBuilder("https://api.vk.com/method"),
 		token: accessToken,
 		rndID: -(1 << 31),
 	}
@@ -33,9 +34,9 @@ func Auth(accessToken string) (*Client, error) {
 
 // Client struct.
 type Client struct {
-	client shttp.Client
+	client vkhttp.Client
 
-	api *shttp.RequestsBuilder
+	api vkhttp.RequestsBuilder
 
 	token string
 	self  *Group
@@ -48,24 +49,17 @@ func (c *Client) Self() Group {
 }
 
 // HTTP returns http client.
-func (c *Client) HTTP() *shttp.Client {
+func (c *Client) HTTP() *vkhttp.Client {
 	return &c.client
 }
 
-func (c *Client) method(method string, args args, dst interface{}) error {
+func (c *Client) method(dst interface{}, method string, args vkargs) error {
 	call := MethodCall{
 		Method: method,
-		Args:   make(map[string]string),
+		Args:   args,
 	}
-	args.VisitAll(func(k, v []byte) {
-		call.Args[string(k)] = string(v)
-	})
 
-	args.Set("access_token", c.token)
-	args.Set("v", Version)
-
-	req := c.api.Build(shttp.POSTStr, args.Query, method)
-	releaseArgs(args)
+	req := c.api.BuildMethod(method, args, "access_token", c.token, "v", Version)
 
 	var res struct {
 		Error *struct {
@@ -76,11 +70,11 @@ func (c *Client) method(method string, args args, dst interface{}) error {
 	}
 
 	status, body, err := c.client.Do(req)
-	if err != nil || status != shttp.StatusOK {
+	if err != nil || status != vkhttp.StatusOK {
 		goto ret
 	}
 
-	err = unmarshal(body, &res)
+	err = json.Unmarshal(body, &res)
 	if err != nil {
 		goto ret
 	}
@@ -94,11 +88,10 @@ func (c *Client) method(method string, args args, dst interface{}) error {
 	}
 
 	if dst != nil {
-		err = unmarshal(res.Response, dst)
-	}
-
-	if err == nil {
-		return nil
+		err = json.Unmarshal(res.Response, dst)
+		if err == nil {
+			return nil
+		}
 	}
 
 ret:
@@ -113,7 +106,7 @@ ret:
 // MethodCall struct.
 type MethodCall struct {
 	Method string
-	Args   map[string]string
+	Args   vkargs
 }
 
 // Error struct.
@@ -133,4 +126,14 @@ func (e *Error) Error() string {
 		errbody = fmt.Sprintf("Status: %d\n%s\n\n%s", e.HTTPStatus, e.Message, string(e.Body))
 	}
 	return fmt.Sprintf("vk.%s(%s)\n%s", e.Call.Method, e.Call.Args, errbody)
+}
+
+type vkargs = vkhttp.Args
+
+func itoa(a int) string {
+	return strconv.Itoa(a)
+}
+
+func ftoa(a float64) string {
+	return strconv.FormatFloat(a, 'f', 7, 64)
 }

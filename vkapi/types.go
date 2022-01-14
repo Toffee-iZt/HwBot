@@ -9,70 +9,58 @@ import (
 // ID is a general id that can point to anything.
 type ID int
 
-// IsUser returns true if it is UserID.
-func (id ID) IsUser() bool {
-	return id > 0 && id < 2e9
-}
-
 // ToUser converts ID to UserID.
 func (id ID) ToUser() UserID {
-	if !id.IsUser() {
-		return 0
+	if id > 0 && id < 2e9 {
+		return UserID(id)
 	}
-	return UserID(id)
-}
-
-// IsGroup returns true if it is GroupID.
-func (id ID) IsGroup() bool {
-	return id < 0
+	return 0
 }
 
 // ToGroup converts ID to GroupID.
 func (id ID) ToGroup() GroupID {
-	if !id.IsGroup() {
-		return 0
+	if id < 0 {
+		return GroupID(-id)
 	}
-	return GroupID(-id)
-}
-
-// IsChat returns true if it is ChatID.
-func (id ID) IsChat() bool {
-	return id > 2e9
+	return 0
 }
 
 // ToChat converts ID to ChatID.
 func (id ID) ToChat() ChatID {
-	if !id.IsChat() {
-		return 0
+	if id > 2e9 {
+		return ChatID(id - 2e9)
 	}
-	return ChatID(id - 2e9)
+	return 0
 }
 
 // UserID is equal to id but points only to users.
 type UserID uint
 
-// ToID converts UserID to ID.
-func (id UserID) ToID() ID {
-	return ID(id)
+// ToID ...
+func (u UserID) ToID() ID {
+	return ID(u)
 }
 
 // GroupID points to group.
 type GroupID uint
 
-// ToID converts GroupID to ID.
-func (id GroupID) ToID() ID {
-	return -ID(id)
+// ToID ...
+func (g GroupID) ToID() ID {
+	return -ID(g)
 }
 
 // ChatID points to chat.
 type ChatID uint
 
-// ToID converts ChatID to ID.
-func (id ChatID) ToID() ID {
-	return ID(id + 2e9)
+// ToID ...
+func (c ChatID) ToID() ID {
+	return ID(c + 2e9)
 }
 
-// NewJSONData creates new json_data from string.
+// JSONData represents json as string.
+type JSONData string
+
+// NewJSONData creates new JSONData from string.
 func NewJSONData(s string) (JSONData, bool) {
 	ok := json.Valid(strbytes.S2b(s))
 	if !ok {
@@ -81,7 +69,7 @@ func NewJSONData(s string) (JSONData, bool) {
 	return JSONData(s), true
 }
 
-// NewJSONDataBytes creates new json_data from bytes slice.
+// NewJSONDataBytes creates new JSONData from bytes slice.
 func NewJSONDataBytes(b []byte) (JSONData, bool) {
 	ok := json.Valid(b)
 	if !ok {
@@ -90,8 +78,14 @@ func NewJSONDataBytes(b []byte) (JSONData, bool) {
 	return JSONData(strbytes.B2s(b)), true
 }
 
-// JSONData represents json as string.
-type JSONData string
+// NewJSONDataMarshal creates new JSONData from object.
+func NewJSONDataMarshal(v interface{}) (JSONData, bool) {
+	d, err := json.Marshal(v)
+	if err != nil {
+		return "{}", false
+	}
+	return JSONData(strbytes.B2s(d)), true
+}
 
 // BoolInt is bool as 0 or 1.
 type BoolInt bool

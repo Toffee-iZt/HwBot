@@ -1,16 +1,15 @@
 package vkapi
 
 import (
+	"encoding/json"
 	"io"
-	"io/fs"
 	"mime/multipart"
 
-	"github.com/Toffee-iZt/HwBot/common/strbytes"
-	"github.com/Toffee-iZt/HwBot/shttp"
+	"github.com/Toffee-iZt/HwBot/vkapi/vkhttp"
 )
 
 // UploadMessagesPhoto uploads photo from source and returns vk string.
-func (c *Client) UploadMessagesPhoto(peerID ID, f fs.File) (string, error) {
+func (c *Client) UploadMessagesPhoto(peerID ID, fname string, data io.Reader) (string, error) {
 	mus, err := c.PhotosGetMessagesUploadServer(peerID)
 	if err != nil {
 		return "", err
@@ -22,7 +21,7 @@ func (c *Client) UploadMessagesPhoto(peerID ID, f fs.File) (string, error) {
 		Server int    `json:"server"`
 	}
 
-	err = c.uploadMultipart(&res, mus.UploadURL, "photo", f)
+	err = c.uploadMultipart(&res, mus.UploadURL, "photo", fname, data)
 	if err != nil {
 		return "", err
 	}
@@ -36,17 +35,14 @@ func (c *Client) UploadMessagesPhoto(peerID ID, f fs.File) (string, error) {
 }
 
 // uploadMultipart uploads multipart data from file to uploadURL.
-func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, file fs.File) error {
-	fstat, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
-	req := shttp.New(shttp.POSTStr, strbytes.S2b(uploadURL))
+func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data io.Reader) error {
+	req := &vkhttp.Request{}
+	req.Header.SetMethod(vkhttp.POSTStr)
+	req.Header.SetRequestURI(uploadURL)
 
 	writer := multipart.NewWriter(req.BodyWriter())
-	part, _ := writer.CreateFormFile(field, fstat.Name())
-	io.Copy(part, file)
+	part, _ := writer.CreateFormFile(field, fname)
+	io.Copy(part, data)
 	writer.Close()
 
 	req.Header.SetContentType(writer.FormDataContentType())
@@ -56,5 +52,5 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, file 
 		return err
 	}
 
-	return unmarshal(body, dst)
+	return json.Unmarshal(body, dst)
 }

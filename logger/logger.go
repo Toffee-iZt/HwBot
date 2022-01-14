@@ -41,11 +41,6 @@ func (l *Logger) SetWriter(w *Writer) {
 	l.out = w
 }
 
-// Writer ...
-func (l *Logger) Writer() *Writer {
-	return l.out
-}
-
 func (l *Logger) log(pref string, pcol *color.Color, f string, v ...interface{}) {
 	if f == "" {
 		return

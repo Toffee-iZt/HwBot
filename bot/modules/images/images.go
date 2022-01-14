@@ -5,15 +5,14 @@ import (
 	"image"
 
 	"github.com/Toffee-iZt/HwBot/bot"
-	"github.com/Toffee-iZt/HwBot/common/strbytes"
 	"github.com/Toffee-iZt/HwBot/logger"
-	"github.com/Toffee-iZt/HwBot/shttp"
 	"github.com/nfnt/resize"
+	"github.com/valyala/fasthttp"
 )
 
 var Module = bot.Module{
 	Name: "images",
-	Init: func(_ *bot.Bot, l *logger.Logger) bool {
+	Init: func(l *logger.Logger) bool {
 		log = l
 		return true
 	},
@@ -23,20 +22,24 @@ var Module = bot.Module{
 
 var log *logger.Logger
 
-var dlClient shttp.Client
+var dlClient fasthttp.Client
 
 func dl(url string) (image.Image, error) {
-	req := shttp.New(shttp.GETStr, strbytes.S2b(url))
-	body, err := dlClient.Do(req)
+	req := fasthttp.AcquireRequest()
+	req.SetRequestURI(url)
+	req.Header.SetMethod(fasthttp.MethodGet)
+
+	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseResponse(resp)
+
+	err := dlClient.Do(req, resp)
 	if err != nil {
 		return nil, err
 	}
 
-	photo, _, err := image.Decode(bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	return photo, nil
+	photo, _, err := image.Decode(bytes.NewReader(resp.Body()))
+	return photo, err
 }
 
 func crop(img image.Image, rect image.Rectangle) image.Image {

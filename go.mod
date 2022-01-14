@@ -5,7 +5,7 @@ go 1.16
 
 require (
 	github.com/Toffee-iZt/balaboba v0.0.0-20210719094803-70e7c5abe996
-	github.com/Toffee-iZt/workfs v0.0.0-20210811184819-64a1a0024b36
+	github.com/Toffee-iZt/wfs v0.0.0-20220113182448-8d9fa55157c8
 	github.com/fatih/color v1.12.0
 	github.com/fogleman/gg v1.3.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0

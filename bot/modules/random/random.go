@@ -14,7 +14,7 @@ import (
 // Module ...
 var Module = bot.Module{
 	Name: "random",
-	Init: func(_ *bot.Bot, _ *logger.Logger) bool {
+	Init: func(_ *logger.Logger) bool {
 		myRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 		return true
 	},
@@ -24,25 +24,24 @@ var Module = bot.Module{
 var myRand *rand.Rand
 
 var list = bot.Command{
-	Cmd:  "list",
-	Desc: "Рандомный список участников",
+	Cmd:         []string{"list", "список"},
+	Description: "Рандомный список участников",
 	Help: "/список умных - список из 5 рандомных участников" +
 		"\nПосле команды можно указать длину списка" +
 		"\nНапример /список 12 задротов - список из 12 участников",
-	Chat: true,
-	Priv: false,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
-		members, err := b.API().Messages.GetConversationMembers(m.Message.PeerID)
+	InChat:    true,
+	InPrivate: false,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+		members, err := ctx.GetMembers()
 		if err != nil {
-			b.SimpleReply(m, "У бота недостаточно прав доступа для выполнения команды")
-			return
+			ctx.ReplyError("У бота недостаточно прав доступа для выполнения команды")
 		}
 
 		l := len(members.Profiles)
 
 		var num = 5
-		if len(args) > 0 {
-			n, _ := strconv.Atoi(args[0])
+		if len(a) > 0 {
+			n, _ := strconv.Atoi(a[0])
 			if n > 0 {
 				num = n
 			}
@@ -52,31 +51,31 @@ var list = bot.Command{
 		}
 
 		users := members.Profiles
-		var str = "Список " + strbytes.Join(args, ' ') + ":\n"
+		var str = "Список " + strbytes.Join(a, ' ') + ":\n"
 		for i := 0; i < num; i++ {
 			n := myRand.Intn(l)
-			u := &users[n]
+			u := users[n]
 			str += strconv.Itoa(i+1) + ". " + vkutils.Mention(u.ID.ToID(), u.FirstName+" "+u.LastName) + "\n"
 			l--
 			users[n] = users[l]
 		}
-		b.SimpleReply(m, str)
+		ctx.ReplyText(str)
 	},
 }
 
 var number = bot.Command{
-	Cmd:  "rand",
-	Desc: "Рандомное число",
+	Cmd:         []string{"rand"},
+	Description: "Рандомное число",
 	Help: "/rand - рандомное число [0, 100]" +
 		"\n/rand <max> - рандомное число [0, max] (0 < max <= maxInt64)" +
 		"\nmax также принимает 2(0b), 8(0 или 0o), 16(0x) системы счисления",
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
+	InChat:    true,
+	InPrivate: true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var max int64 = 100
 		var base = 10
-		if len(args) > 0 {
-			num := args[0]
+		if len(a) > 0 {
+			num := a[0]
 			if num[0] == '0' {
 				switch num[1] {
 				case 'b':
@@ -96,7 +95,7 @@ var number = bot.Command{
 			var err error
 			max, err = strconv.ParseInt(num, base, 64)
 			if err != nil || max <= 0 {
-				b.SimpleReply(m, "Укажите число от 0 до MaxInt64")
+				ctx.ReplyText("Укажите число от 0 до MaxInt64")
 				return
 			}
 		}
@@ -106,81 +105,81 @@ var number = bot.Command{
 			t += "\n10 -> " + strconv.FormatInt(r, 10)
 		}
 
-		b.SimpleReply(m, t)
+		ctx.ReplyText(t)
 	},
 }
 
 var who = bot.Command{
-	Cmd:  "who",
-	Desc: "Выбрать рандомного участника",
-	Help: "/who <string>",
-	Chat: true,
-	Priv: false,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
-		members, err := b.API().Messages.GetConversationMembers(m.Message.PeerID)
+	Cmd:         []string{"who", "кто"},
+	Description: "Выбрать рандомного участника",
+	Help:        "/who <string>",
+	InChat:      true,
+	InPrivate:   false,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+		members, err := ctx.GetMembers()
 		if err != nil {
-			b.SimpleReply(m, "У бота недостаточно прав доступа для выполнения команды")
+			ctx.ReplyText("У бота недостаточно прав доступа для выполнения команды")
 			return
 		}
 
 		r := myRand.Intn(len(members.Profiles))
 		p := members.Profiles[r]
 		str := vkutils.Mention(p.ID.ToID(), p.FirstName+" "+p.LastName)
-		if len(args) > 0 {
-			str += " — " + strbytes.Join(args, ' ')
+		if len(a) > 0 {
+			str += " — " + strbytes.Join(a, ' ')
 		}
 
-		b.SimpleReply(m, str)
+		ctx.ReplyText(str)
 	},
 }
 
 var flip = bot.Command{
-	Cmd:  "flip",
-	Desc: "Подбросить монетку",
-	Help: "",
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, _ []string) {
+	Cmd:         []string{"flip", "флип", "монетка"},
+	Description: "Подбросить монетку",
+	Help:        "",
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var r string
 		if myRand.Intn(2) == 1 {
 			r = "Выпал орёл"
 		} else {
 			r = "Выпала решка"
 		}
-		b.SimpleReply(m, r)
+		ctx.ReplyText(r)
 	},
 }
 
 var info = bot.Command{
-	Cmd:  "info",
-	Desc: "Вероятность события",
-	Help: "/info <событие> - случайная вероятность события",
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
-		if len(args) == 0 {
-			b.SimpleReply(m, "Укажите событие")
+	Cmd:         []string{"info", "инфа"},
+	Description: "Вероятность события",
+	Help:        "/info <событие> - случайная вероятность события",
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+		if len(a) == 0 {
+			ctx.ReplyText("Укажите событие")
 			return
 		}
 		p := myRand.Intn(101)
-		e := strbytes.Join(args, ' ')
-		b.SimpleReply(m, "Вероятность того, что "+e+" — "+strconv.Itoa(p)+"%")
+		e := strbytes.Join(a, ' ')
+		ctx.ReplyText("Вероятность того, что " + e + " — " + strconv.Itoa(p) + "%")
 	},
 }
 
 var when = bot.Command{
-	Cmd:  "when",
-	Desc: "Когда произойдет событие",
-	Help: "/when <событие> - случайная дата события",
-	Chat: true,
-	Priv: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, args []string) {
-		if len(args) == 0 {
-			b.SimpleReply(m, "Укажите событие")
+	Cmd:         []string{"when", "когда"},
+	Description: "Когда произойдет событие",
+	Help:        "/when <событие> - случайная дата события",
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+		if len(a) == 0 {
+			ctx.ReplyText("Укажите событие")
 			return
 		}
 		t := time.Now().AddDate(myRand.Intn(51), myRand.Intn(12), myRand.Intn(31))
-		e := strbytes.Join(args, ' ')
-		b.SimpleReply(m, e+" "+t.Format("02 Jan 2006"))
+		e := strbytes.Join(a, ' ')
+		ctx.ReplyText(e + " " + t.Format("02 Jan 2006"))
 	},
 }

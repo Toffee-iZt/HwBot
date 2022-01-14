@@ -52,11 +52,13 @@ type Keyboard struct {
 	Inline  bool               `json:"inline"`
 }
 
-func (k *Keyboard) String() string {
+// Data converts the keyboard into a sandable object.
+func (k *Keyboard) Data() JSONData {
 	if k == nil {
 		return ""
 	}
-	return string(marshal(k))
+	d, _ := NewJSONDataMarshal(k)
+	return d
 }
 
 // AddRow adds line of buttons.
@@ -93,7 +95,7 @@ func (k *Keyboard) add(b KeyboardButton) bool {
 }
 
 // AddText adds a text button to the last row.
-func (k *Keyboard) AddText(payload string, label string, color string) bool {
+func (k *Keyboard) AddText(payload JSONData, label string, color string) bool {
 	return k.add(KeyboardButton{
 		Color: color,
 		Action: KeyboardAction{
@@ -105,7 +107,7 @@ func (k *Keyboard) AddText(payload string, label string, color string) bool {
 }
 
 // AddLocation adds a location button to the last row.
-func (k *Keyboard) AddLocation(payload string) bool {
+func (k *Keyboard) AddLocation(payload JSONData) bool {
 	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeLocation,
@@ -115,7 +117,7 @@ func (k *Keyboard) AddLocation(payload string) bool {
 }
 
 // AddVkPay adds a VKPay button to the last row.
-func (k *Keyboard) AddVkPay(payload string, hash string) bool {
+func (k *Keyboard) AddVkPay(payload JSONData, hash string) bool {
 	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeVkPay,
@@ -126,7 +128,7 @@ func (k *Keyboard) AddVkPay(payload string, hash string) bool {
 }
 
 // AddOpenApp adds a button with link to the vkapp to the last row.
-func (k *Keyboard) AddOpenApp(payload string, appID, ownerID int, hash string) bool {
+func (k *Keyboard) AddOpenApp(payload JSONData, appID, ownerID int, hash string) bool {
 	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeOpenApp,
@@ -139,7 +141,7 @@ func (k *Keyboard) AddOpenApp(payload string, appID, ownerID int, hash string) b
 }
 
 // AddOpenLink adds a button with external link to the last row.
-func (k *Keyboard) AddOpenLink(payload string, label string, link string) bool {
+func (k *Keyboard) AddOpenLink(payload JSONData, label string, link string) bool {
 	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeOpenLink,
@@ -151,7 +153,7 @@ func (k *Keyboard) AddOpenLink(payload string, label string, link string) bool {
 }
 
 // AddCallback adds a callback text button to the last row.
-func (k *Keyboard) AddCallback(payload string, label string, color string) bool {
+func (k *Keyboard) AddCallback(payload JSONData, label string, color string) bool {
 	return k.add(KeyboardButton{
 		Color: color,
 		Action: KeyboardAction{
@@ -170,11 +172,11 @@ type KeyboardButton struct {
 
 // KeyboardAction struct.
 type KeyboardAction struct {
-	Type    string `json:"type"`
-	Payload string `json:"payload"`
-	Label   string `json:"label,omitempty"`
-	Link    string `json:"link,omitempty"`
-	Hash    string `json:"hash,omitempty"`
-	AppID   int    `json:"app_id,omitempty"`
-	OwnerID int    `json:"owner_id,omitempty"`
+	Type    string   `json:"type"`
+	Payload JSONData `json:"payload"`
+	Label   string   `json:"label,omitempty"`
+	Link    string   `json:"link,omitempty"`
+	Hash    string   `json:"hash,omitempty"`
+	AppID   int      `json:"app_id,omitempty"`
+	OwnerID int      `json:"owner_id,omitempty"`
 }

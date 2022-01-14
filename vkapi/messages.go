@@ -1,6 +1,7 @@
 package vkapi
 
 import (
+	"encoding/json"
 	"sync/atomic"
 )
 
@@ -45,41 +46,35 @@ func (c *Client) Send(msg OutMessage) (int, error) {
 		msg.Attachment = msg.Attachment[:10]
 	}
 
-	args := newArgs()
-	args.Set("random_id", itoa(int(atomic.AddInt32(&c.rndID, 1))))
+	args := vkargs{
+		"random_id": atomic.AddInt32(&c.rndID, 1),
+		"user_id":   msg.UserID,
+		"user_ids":  msg.UserIDs,
+		"peer_id":   msg.PeerID,
+		"peer_ids":  msg.PeerIDs,
+		"domain":    msg.Domain,
+		"chat_id":   msg.ChatID,
 
-	args.Set("user_id", itoa(int(msg.UserID)))
-	for i := range msg.UserIDs {
-		args.Add("user_ids", itoa(int(msg.UserIDs[i])))
-	}
-	args.Set("peer_id", itoa(int(msg.PeerID)))
-	for i := range msg.PeerIDs {
-		args.Add("peer_ids", itoa(int(msg.PeerIDs[i])))
-	}
-	args.Set("domain", msg.Domain)
-	args.Set("chat_id", itoa(int(msg.ChatID)))
+		"message":    msg.Message,
+		"lat":        msg.Lat,
+		"long":       msg.Long,
+		"attachment": msg.Attachment,
+		"sticker_id": msg.StickerID,
+		"keyboard":   msg.Keyboard.Data(),
 
-	args.Set("message", msg.Message)
-	args.Set("lat", ftoa(msg.Lat))
-	args.Set("long", ftoa(msg.Long))
-	args.Set("attachment", msg.Attachment...)
-	args.Set("sticker_id", itoa(msg.StickerID))
-	args.Set("keyboard", msg.Keyboard.String())
-
-	args.Set("reply_to", itoa(msg.ReplyTo))
-	for _, f := range msg.ForwardMessages {
-		args.Add("peer_ids", itoa(f))
+		"reply_to":         msg.ReplyTo,
+		"forward_messages": msg.ForwardMessages,
 	}
 
 	if msg.DontParseLinks {
-		args.Set("dont_parse_links", "1")
+		args["dont_parse_links"] = "1"
 	}
 	if msg.DisableMentions {
-		args.Set("disable_mentions", "1")
+		args["disable_mentions"] = "1"
 	}
 
 	var id int
-	return id, c.method("messages.send", args, &id)
+	return id, c.method(&id, "messages.send", args)
 }
 
 //
@@ -107,15 +102,18 @@ type EventData struct {
 
 // SendMessageEventAnswer sends event answer.
 func (c *Client) SendMessageEventAnswer(eventID string, userID UserID, peerID ID, eventData *EventData) error {
-	args := newArgs()
-	args.Set("event_id", eventID)
-	args.Set("user_id", itoa(int(userID)))
-	args.Set("peer_id", itoa(int(peerID)))
+	var data string
 	if eventData != nil {
-		args.Set("event_data", string(marshal(eventData)))
+		m, _ := json.Marshal(eventData)
+		data = string(m)
 	}
 
-	return c.method("messages.sendMessageEventAnswer", args, nil)
+	return c.method(nil, "messages.sendMessageEventAnswer", vkargs{
+		"event_id":   eventID,
+		"user_id":    userID,
+		"peer_id":    peerID,
+		"event_data": data,
+	})
 }
 
 // Members struct.
@@ -138,17 +136,17 @@ type Member struct {
 
 // GetConversationMembers returns a list of IDs of users participating in a conversation.
 func (c *Client) GetConversationMembers(peerID ID) (*Members, error) {
-	args := newArgs()
-	args.Set("peer_id", itoa(int(peerID)))
 	var mem Members
-	return &mem, c.method("messages.getConversationMembers", args, &mem)
+	return &mem, c.method(&mem, "messages.getConversationMembers", vkargs{
+		"peer_id": peerID,
+	})
 }
 
 // RemoveChatUser allows the current user to leave a chat or, if the current user started the chat,
 // allows the user to remove another user from the chat.
 func (c *Client) RemoveChatUser(chatID ChatID, memberID ID) error {
-	args := newArgs()
-	args.Set("chat_id", itoa(int(chatID)))
-	args.Set("member_id", itoa(int(memberID)))
-	return c.method("messages.removeChatUser", args, nil)
+	return c.method(nil, "messages.removeChatUser", vkargs{
+		"chat_id":   chatID,
+		"member_id": memberID,
+	})
 }

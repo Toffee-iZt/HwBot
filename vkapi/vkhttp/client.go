@@ -1,4 +1,4 @@
-package shttp
+package vkhttp
 
 import (
 	"context"

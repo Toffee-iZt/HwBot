@@ -52,11 +52,11 @@ type MessageNew struct {
 
 // MessageEvent struct.
 type MessageEvent struct {
-	Payload       string       `json:"payload"`
-	EventID       string       `json:"event_id"`
-	ConvMessageID int          `json:"conversation_message_id"`
-	UserID        vkapi.UserID `json:"user_id"`
-	PeerID        vkapi.ID     `json:"peer_id"`
+	Payload       vkapi.JSONData `json:"payload"`
+	EventID       string         `json:"event_id"`
+	ConvMessageID int            `json:"conversation_message_id"`
+	UserID        vkapi.UserID   `json:"user_id"`
+	PeerID        vkapi.ID       `json:"peer_id"`
 }
 
 // Message struct.

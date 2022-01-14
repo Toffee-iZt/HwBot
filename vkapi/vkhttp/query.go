@@ -1,4 +1,4 @@
-package shttp
+package vkhttp
 
 // Short version of github.com/valyala/fasthttp.Args
 

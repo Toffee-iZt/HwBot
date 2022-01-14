@@ -1,16 +1,15 @@
 package images
 
 import (
+	"bytes"
 	"image"
 	"image/color"
 	"image/png"
-	"io/fs"
 	"strings"
 	"time"
 
 	"github.com/Toffee-iZt/HwBot/bot"
 	"github.com/Toffee-iZt/HwBot/vkapi"
-	"github.com/Toffee-iZt/workfs"
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/font"
@@ -20,37 +19,35 @@ import (
 const copyrightSymbol = "©"
 
 var citgen = bot.Command{
-	Cmd:  "citgen",
-	Desc: "Генерация цитаты",
-	Help: "/citen и ответить или переслать сообщение",
-	Priv: true,
-	Chat: true,
-	Run: func(b *bot.Bot, m *bot.IncomingMessage, a []string) {
+	Cmd:         []string{"citgen"},
+	Description: "Генерация цитаты",
+	Help:        "/citen и ответить или переслать сообщение",
+	InPrivate:   true,
+	InChat:      true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var fromID vkapi.ID
 		var text string
 		var t int64
 		switch {
-		case m.Message.Reply != nil:
-			r := m.Message.Reply
+		case msg.Message.Reply != nil:
+			r := msg.Message.Reply
 			fromID, text = r.FromID, r.Text
 			t = r.Date
-		case len(m.Message.Forward) > 0:
-			f := m.Message.Forward[0]
+		case len(msg.Message.Forward) > 0:
+			f := msg.Message.Forward[0]
 			fromID, text = f.FromID, f.Text
 			t = f.Date
 		default:
-			b.SimpleReply(m, "Ответьте или перешлите сообщение")
-			return
+			ctx.ReplyText("Ответьте или перешлите сообщение")
 		}
 		if text == "" {
-			b.SimpleReply(m, "Сообщение не содержит текста")
-			return
+			ctx.ReplyText("Сообщение не содержит текста")
 		}
 		if len(a) > 0 {
 			text = strings.Join(a, " ")
 		}
 
-		api := b.API()
+		api := ctx.BotInstance().API()
 
 		name, photo, err := getNamePhoto(api, fromID)
 		if err != nil {
@@ -58,21 +55,19 @@ var citgen = bot.Command{
 			return
 		}
 
-		f, err := generateQuote(photo, name, text, time.Unix(t, 0), fromID == m.Message.FromID, color.Black, color.White)
+		data, err := generateQuote(photo, name, text, time.Unix(t, 0), fromID == msg.Message.FromID, color.Black, color.White)
 		if err != nil {
 			log.Error("citgen generate: %s", err.Error())
 			return
 		}
-		defer f.Close()
 
-		s, err := api.UploadMessagesPhoto(m.Message.PeerID, f)
+		s, err := ctx.UploadAttachment("citgen.png", data)
 		if err != nil {
 			log.Error("citgen upload: %s", err.Error())
 			return
 		}
 
-		_, vkerr := api.Messages.Send(vkapi.OutMessage{
-			PeerID:     m.Message.PeerID,
+		_, vkerr := ctx.SendMessage(vkapi.OutMessageContent{
 			Attachment: []string{s},
 		})
 		if vkerr != nil {
@@ -85,15 +80,15 @@ var citgen = bot.Command{
 func getNamePhoto(api *vkapi.Client, from vkapi.ID) (string, image.Image, error) {
 	var name string
 	var photo string
-	if from.IsGroup() {
-		g, err := api.Groups.GetByID([]vkapi.GroupID{from.ToGroup()})
+	if gid := from.ToGroup(); gid != 0 {
+		g, err := api.GroupsGetByID(gid)
 		if err != nil || len(g) == 0 {
 			return "", nil, err
 		}
 		name = g[0].Name
 		photo = g[0].Photo200
 	} else {
-		u, err := api.Users.Get([]vkapi.UserID{from.ToUser()}, "photo_200")
+		u, err := api.UsersGet([]vkapi.UserID{from.ToUser()}, "", "photo_200")
 		if err != nil || len(u) == 0 {
 			return "", nil, err
 		}
@@ -130,7 +125,7 @@ func getGoFontFace() font.Face {
 	return truetype.NewFace(gottf, &truetype.Options{Size: fontSize})
 }
 
-func generateQuote(photo image.Image, name, quote string, t time.Time, self bool, bg, fg color.Color) (fs.File, error) {
+func generateQuote(photo image.Image, name, quote string, t time.Time, self bool, bg, fg color.Color) (*bytes.Buffer, error) {
 	lines, height := generateLines(quote, textPointX)
 
 	name += " " + copyrightSymbol
@@ -164,13 +159,8 @@ func generateQuote(photo image.Image, name, quote string, t time.Time, self bool
 	dc.Clip()
 	dc.DrawImageAnchored(photo, px, py, 0.5, 0.5)
 
-	f := workfs.OpenAtOnce("citgen.png")
-	err := png.Encode(f, dc.Image())
-	if err != nil {
-		f.Close()
-		return nil, err
-	}
-	return f, nil
+	data := bytes.NewBuffer(nil)
+	return data, png.Encode(data, dc.Image())
 }
 
 func generateLines(s string, w int) ([]string, int) {
