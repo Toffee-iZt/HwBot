@@ -1,5 +1,7 @@
 package vkapi
 
+import "strconv"
+
 // vk types
 const (
 	AttTypePhoto        = "photo"
@@ -20,7 +22,7 @@ type attachment struct {
 }
 
 func (a *attachment) string(typ string) string {
-	s := string(typ) + itoa(int(a.OwnerID)) + "_" + itoa(a.ID)
+	s := string(typ) + strconv.Itoa(int(a.OwnerID)) + "_" + strconv.Itoa(a.ID)
 	if a.AccessKey != "" {
 		s += "_" + a.AccessKey
 	}

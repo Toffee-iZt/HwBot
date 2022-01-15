@@ -10,12 +10,13 @@ import (
 	"github.com/Toffee-iZt/HwBot/vkapi"
 )
 
-func makeContext(b *Bot, peerID vkapi.ID, cmd *command) *Context {
+func makeContext(b *Bot, peerID vkapi.ID, cmd *command, data *NewMessage) *Context {
 	return &Context{
 		peer: peerID,
 		bot:  b,
 		log:  cmd.log,
 		cmd:  cmd.Command,
+		data: data,
 	}
 }
 
@@ -25,6 +26,7 @@ type Context struct {
 	bot  *Bot
 	log  *logger.Logger
 	cmd  *Command
+	data *NewMessage
 }
 
 func (c *Context) close() {
@@ -34,13 +36,13 @@ func (c *Context) close() {
 	runtime.Goexit()
 }
 
-func (c *Context) errlog(fmt string, err error, a ...interface{}) {
+func (c *Context) errlog(f string, err error, a ...interface{}) {
 	if err != nil {
-		c.log.Error(fmt, a...)
+		c.log.Error(f, err.Error(), fmt.Sprint(a...))
 	}
 }
 
-// Reply replies to a message with a text and closes bridge.
+// Reply replies to a message with a text and closes context.
 func (c *Context) Reply(text string, attachments ...string) {
 	_, vkerr := c.SendMessage(vkapi.OutMessageContent{
 		Message:    text,
@@ -50,7 +52,7 @@ func (c *Context) Reply(text string, attachments ...string) {
 	c.close()
 }
 
-// ReplyText replies to a message with a text and closes bridge.
+// ReplyText replies to a message with a text and closes context.
 func (c *Context) ReplyText(text string) {
 	c.Reply(text)
 }

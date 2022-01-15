@@ -24,7 +24,6 @@ var Module = bot.Module{
 	Terminate: nil,
 	Commands: []*bot.Command{
 		&debug,
-		&ping,
 		&testembed,
 		&vkslow,
 		//&keyboard,
@@ -75,17 +74,6 @@ func memStats(gc bool) string {
 		"\nGoroutines:", runtime.NumGoroutine(),
 		str)
 	return str
-}
-
-var ping = bot.Command{
-	Cmd:         []string{"ping"},
-	Description: "Проверка работоспособности бота",
-	Help:        "",
-	InChat:      true,
-	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		ctx.ReplyText("понг")
-	},
 }
 
 //go:embed resources

@@ -157,11 +157,11 @@ func (b *Bot) handle(ctx context.Context, e longpoll.Event) {
 			return
 		}
 
-		bctx := makeContext(b, msgNew.Message.PeerID, cmd)
+		bctx := makeContext(b, msgNew.Message.PeerID, cmd, msgNew)
 
 		id := int(msgNew.Message.PeerID)
 		if id > 2e9 && !cmd.InChat || id < 2e9 && !cmd.InPrivate {
-			bctx.ReplyText("Команда не доступна в данном типе чата")
+			bctx.ReplyText("Команда недоступна в данном типе чата")
 		}
 
 		cmd.Run(bctx, msgNew, args)
@@ -177,10 +177,7 @@ func (b *Bot) getCommand(msg *longpoll.Message) (*command, []string) {
 			msg.Text = msg.Text[:300]
 		}
 		s := strings.Split(msg.Text, " ")
-		c := b.commands[s[0][1:]]
-		if isuser := msg.PeerID < 2e9; c != nil && !(!c.InPrivate && isuser || !c.InChat && !isuser) {
-			return c, s[1:]
-		}
+		return b.commands[s[0][1:]], s[1:]
 	}
 	return nil, nil
 }

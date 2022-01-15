@@ -64,7 +64,7 @@ var list = bot.Command{
 }
 
 var number = bot.Command{
-	Cmd:         []string{"rand"},
+	Cmd:         []string{"rand", "roll"},
 	Description: "Рандомное число",
 	Help: "/rand - рандомное число [0, 100]" +
 		"\n/rand <max> - рандомное число [0, max] (0 < max <= maxInt64)" +
@@ -73,39 +73,15 @@ var number = bot.Command{
 	InPrivate: true,
 	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var max int64 = 100
-		var base = 10
 		if len(a) > 0 {
 			num := a[0]
-			if num[0] == '0' {
-				switch num[1] {
-				case 'b':
-					base = 2
-					num = num[2:]
-				case 'o':
-					base = 8
-					num = num[2:]
-				case 'x':
-					base = 16
-					num = num[2:]
-				default:
-					base = 8
-					num = num[1:]
-				}
-			}
 			var err error
-			max, err = strconv.ParseInt(num, base, 64)
+			max, err = strconv.ParseInt(num, 10, 64)
 			if err != nil || max <= 0 {
 				ctx.ReplyText("Укажите число от 0 до MaxInt64")
-				return
 			}
 		}
-		r := myRand.Int63n(max)
-		t := "Рандомное число — " + strconv.FormatInt(r, base)
-		if base != 10 {
-			t += "\n10 -> " + strconv.FormatInt(r, 10)
-		}
-
-		ctx.ReplyText(t)
+		ctx.ReplyText("Выпало число " + strconv.FormatInt(myRand.Int63n(max), 10))
 	},
 }
 

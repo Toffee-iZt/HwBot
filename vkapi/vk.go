@@ -3,7 +3,6 @@ package vkapi
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/Toffee-iZt/HwBot/vkapi/vkhttp"
 )
@@ -54,12 +53,8 @@ func (c *Client) HTTP() *vkhttp.Client {
 }
 
 func (c *Client) method(dst interface{}, method string, args vkargs) error {
-	call := MethodCall{
-		Method: method,
-		Args:   args,
-	}
-
-	req := c.api.BuildMethod(method, args, "access_token", c.token, "v", Version)
+	args["v"] = Version
+	req := c.api.BuildMethod(method, args, "access_token", c.token)
 
 	var res struct {
 		Error *struct {
@@ -69,71 +64,37 @@ func (c *Client) method(dst interface{}, method string, args vkargs) error {
 		Response json.RawMessage `json:"response"`
 	}
 
-	status, body, err := c.client.Do(req)
-	if err != nil || status != vkhttp.StatusOK {
-		goto ret
-	}
-
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		goto ret
-	}
+	c.client.Do(req, &res)
 
 	if res.Error != nil {
 		return &Error{
-			Call:    &call,
+			Method:  method,
+			Args:    args,
 			Code:    res.Error.Code,
 			Message: res.Error.Message,
 		}
 	}
 
 	if dst != nil {
-		err = json.Unmarshal(res.Response, dst)
-		if err == nil {
-			return nil
+		jerr := json.Unmarshal(res.Response, dst)
+		if jerr != nil {
+			panic("vk: method response invalid format")
 		}
 	}
 
-ret:
-	return &Error{
-		Call:       &call,
-		Message:    err.Error(),
-		HTTPStatus: status,
-		Body:       body,
-	}
-}
-
-// MethodCall struct.
-type MethodCall struct {
-	Method string
-	Args   vkargs
+	return nil
 }
 
 // Error struct.
 type Error struct {
-	Call       *MethodCall
-	Code       int
-	Message    string
-	HTTPStatus int
-	Body       []byte
+	Method  string
+	Args    vkhttp.Args
+	Code    int
+	Message string
 }
 
 func (e *Error) Error() string {
-	var errbody string
-	if e.Code != 0 {
-		errbody = fmt.Sprintf("vk: (%d) %s", e.Code, e.Message)
-	} else {
-		errbody = fmt.Sprintf("Status: %d\n%s\n\n%s", e.HTTPStatus, e.Message, string(e.Body))
-	}
-	return fmt.Sprintf("vk.%s(%s)\n%s", e.Call.Method, e.Call.Args, errbody)
+	return fmt.Sprintf("vk.%s(%s) error %d %s", e.Method, e.Args, e.Code, e.Message)
 }
 
 type vkargs = vkhttp.Args
-
-func itoa(a int) string {
-	return strconv.Itoa(a)
-}
-
-func ftoa(a float64) string {
-	return strconv.FormatFloat(a, 'f', 7, 64)
-}

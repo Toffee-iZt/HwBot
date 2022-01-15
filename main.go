@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	println(wfs.GetExec, wfs.GetExecDir())
+	println(wfs.GetExecName(), wfs.GetExecDir())
 	println("PID", os.Getpid())
 	println("vkapi version:", vkapi.Version)
 

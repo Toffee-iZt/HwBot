@@ -2,6 +2,8 @@ package vkhttp
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/valyala/fasthttp"
@@ -15,51 +17,55 @@ type Client struct {
 	fhttp fasthttp.Client
 }
 
-// Do performs the given http request and returns status and response body.
-func (c *Client) Do(req *Request) (int, []byte, error) {
+// Do performs the given http request and parses response body.
+func (c *Client) Do(req *Request, obj interface{}) {
+	defer fasthttp.ReleaseRequest(req)
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
 	err := c.fhttp.Do(req, resp)
 	if err != nil {
-		return 0, nil, err
+		panic(fmt.Sprintf("vkhttp: bug %s\n%s\n%s", err.Error(), string(req.RequestURI()), string(req.Body())))
 	}
-	return resp.StatusCode(), resp.SwapBody(nil), nil
+	body := resp.SwapBody(nil)
+	if status := resp.StatusCode(); status != StatusOK {
+		panic(fmt.Sprintf("vkhttp: http status %d\n%s", status, string(body)))
+	}
+	err = json.Unmarshal(body, obj)
+	if err != nil {
+		panic(fmt.Sprintf("vkhttp: invalid body json format(%s)", err.Error()))
+	}
 }
 
-// DoContext performs the given http request with context and returns status and response body.
-func (c *Client) DoContext(ctx context.Context, req *Request) (int, []byte, error) {
+// DoContext performs the given http request with context and parses response body.
+func (c *Client) DoContext(ctx context.Context, req *Request, obj interface{}) error {
 	reqCopy := fasthttp.AcquireRequest()
 	req.Header.CopyTo(&reqCopy.Header)
 	req.PostArgs().CopyTo(reqCopy.PostArgs())
 	reqCopy.SwapBody(req.SwapBody(nil))
 
-	var status int
-	var body []byte
-	ch := make(chan error)
+	ch := make(chan struct{})
 	mu := sync.Mutex{}
 
 	go func() {
-		var err error
-		status, body, err = c.Do(reqCopy)
+		c.Do(reqCopy, obj)
 		mu.Lock()
 		select {
 		case <-ch: // closed when ctx is done
 		default:
 			req.SwapBody(reqCopy.SwapBody(nil))
-			ch <- err
+			ch <- struct{}{}
 		}
-		fasthttp.ReleaseRequest(reqCopy)
 		mu.Unlock()
 	}()
 
 	select {
-	case err := <-ch:
-		return status, body, err
+	case <-ch:
+		return nil
 	case <-ctx.Done():
 		mu.Lock()
 		close(ch)
 		mu.Unlock()
 	}
 
-	return 0, nil, ctx.Err()
+	return ctx.Err()
 }

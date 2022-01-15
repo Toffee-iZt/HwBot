@@ -1,7 +1,6 @@
 package vkapi
 
 import (
-	"encoding/json"
 	"io"
 	"mime/multipart"
 
@@ -21,10 +20,7 @@ func (c *Client) UploadMessagesPhoto(peerID ID, fname string, data io.Reader) (s
 		Server int    `json:"server"`
 	}
 
-	err = c.uploadMultipart(&res, mus.UploadURL, "photo", fname, data)
-	if err != nil {
-		return "", err
-	}
+	c.uploadMultipart(&res, mus.UploadURL, "photo", fname, data)
 
 	saved, err := c.PhotosSaveMessagesPhoto(res.Server, res.Photo, res.Hash)
 	if err != nil {
@@ -35,7 +31,7 @@ func (c *Client) UploadMessagesPhoto(peerID ID, fname string, data io.Reader) (s
 }
 
 // uploadMultipart uploads multipart data from file to uploadURL.
-func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data io.Reader) error {
+func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data io.Reader) {
 	req := &vkhttp.Request{}
 	req.Header.SetMethod(vkhttp.POSTStr)
 	req.Header.SetRequestURI(uploadURL)
@@ -47,10 +43,5 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname
 
 	req.Header.SetContentType(writer.FormDataContentType())
 
-	_, body, err := c.client.Do(req)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(body, dst)
+	c.client.Do(req, dst)
 }

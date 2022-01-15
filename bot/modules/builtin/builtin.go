@@ -19,7 +19,11 @@ var Module = bot.Module{
 		return true
 	},
 	Terminate: nil,
-	Commands:  []*bot.Command{&help, &about},
+	Commands: []*bot.Command{
+		&help,
+		&about,
+		&ping,
+	},
 }
 
 var log *logger.Logger
@@ -70,5 +74,16 @@ var about = bot.Command{
 			"\nUptime:", time.Now().Sub(start).Truncate(time.Second),
 			"\nВерсия API VK:", vkapi.Version,
 		))
+	},
+}
+
+var ping = bot.Command{
+	Cmd:         []string{"ping"},
+	Description: "Проверка работоспособности бота",
+	Help:        "",
+	InChat:      true,
+	InPrivate:   true,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+		ctx.ReplyText("понг")
 	},
 }

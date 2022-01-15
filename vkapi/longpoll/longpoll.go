@@ -2,8 +2,6 @@ package longpoll
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strconv"
 
 	"github.com/Toffee-iZt/HwBot/common"
@@ -22,10 +20,6 @@ func New(vk *vkapi.Client) *LongPoll {
 type LongPoll struct {
 	vk   *vkapi.Client
 	sync common.Sync
-}
-
-func (lp *LongPoll) update() (*vkapi.LongPollServer, error) {
-	return lp.vk.GetLongPollServer(lp.vk.Self().ID)
 }
 
 // Done returns a channel that closes when the longpoll is finished
@@ -51,42 +45,35 @@ func (lp *LongPoll) Run(ctx context.Context, wait int) <-chan Event {
 	return ch
 }
 
-func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
-	serv, err := lp.update()
+func (lp *LongPoll) update() *vkapi.LongPollServer {
+	s, err := lp.vk.GetLongPollServer(lp.vk.Self().ID)
 	if err != nil {
-		lp.sync.ErrClose(fmt.Errorf("longpoll init server: %w", err))
+		panic("longpoll: update error\n" + err.Error())
 	}
+	return s
+}
 
+func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
+	serv := lp.update()
 	builder := vkhttp.NewRequestsBuilder(serv.Server)
 	args := vkhttp.Args{
 		"act":  "a_check",
 		"wait": strconv.Itoa(wait),
-		"key":  serv.Key,
 		"ts":   serv.Ts,
 	}
 
 	for {
-		req := builder.Build(args)
-		status, body, err := lp.vk.HTTP().DoContext(ctx, req)
-		if err != nil || status != vkhttp.StatusOK {
-			if err != nil || err != context.Canceled {
-				err = fmt.Errorf("longpoll: %w", err)
-			}
-			lp.sync.ErrClose(&vkapi.Error{
-				Message:    err.Error(),
-				HTTPStatus: status,
-				Body:       body,
-			})
-		}
+		req := builder.Build(args, "key", serv.Key)
+
 		var res struct {
 			Ts      string  `json:"ts"`
 			Updates []Event `json:"updates"`
 			Failed  int     `json:"failed"`
 		}
 
-		err = json.Unmarshal(body, &res)
-		if err != nil {
-			lp.sync.ErrClose(fmt.Errorf("longpoll json: %w\n%s", err, string(body)))
+		ctxerr := lp.vk.HTTP().DoContext(ctx, req, &res)
+		if ctxerr != nil {
+			lp.sync.ErrClose(ctxerr)
 			return
 		}
 
@@ -94,12 +81,7 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
 		default:
 			args["ts"] = res.Ts
 		case 2, 3:
-			serv, err = lp.update()
-			if err != nil {
-				lp.sync.ErrClose(fmt.Errorf("longpoll update: %w", err))
-				return
-			}
-			args["key"] = serv.Key
+			serv = lp.update()
 			if res.Failed == 3 {
 				args["ts"] = serv.Ts
 			}

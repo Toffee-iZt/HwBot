@@ -29,12 +29,12 @@ func NewRequestsBuilder(dst string) RequestsBuilder {
 type RequestsBuilder string
 
 // Build builds request with given args.
-func (b *RequestsBuilder) Build(args Args) *Request {
-	return b.BuildMethod("", args)
+func (b *RequestsBuilder) Build(args Args, cred ...string) *Request {
+	return b.BuildMethod("", args, cred...)
 }
 
 // BuildMethod builds request with vkmethod and given args.
-func (b *RequestsBuilder) BuildMethod(vkmethod string, args Args, add ...string) *Request {
+func (b *RequestsBuilder) BuildMethod(vkmethod string, args Args, cred ...string) *Request {
 	uribuf := bpool.Get()
 	uribuf.WriteString(string(*b))
 
@@ -45,13 +45,15 @@ func (b *RequestsBuilder) BuildMethod(vkmethod string, args Args, add ...string)
 
 	if args != nil {
 		uribuf.WriteByte('?')
-		q := MakeQuery(args)
-		for i := 0; len(add)%2 == 0 && i < len(add); {
-			q.Set(add[i], add[i+1])
-			i += 2
+		q := acquireQuery()
+		for k, v := range args {
+			q.Set(k, valof(reflect.ValueOf(v))...)
+		}
+		for i := 0; len(cred)%2 == 0 && i < len(cred); i += 2 {
+			q.Set(cred[i], cred[i+1])
 		}
 		uribuf.B = q.AppendBytes(uribuf.B)
-		ReleaseQuery(q)
+		releaseQuery(q)
 	}
 
 	req := fasthttp.AcquireRequest()
@@ -70,22 +72,8 @@ func (b *RequestsBuilder) BuildMethod(vkmethod string, args Args, add ...string)
 // Args is allias for string map.
 type Args map[string]interface{}
 
-// MakeQuery converts vk args structure into http query.
-func MakeQuery(args Args) *Query {
-	q := AcquireQuery()
-	for k, v := range args {
-		q.Set(k, valof(reflect.ValueOf(v))...)
-	}
-	return q
-}
-
 func valof(rval reflect.Value) []string {
 	if k := rval.Kind(); k == reflect.Array || k == reflect.Slice {
-		k = rval.Type().Elem().Kind()
-		if k == reflect.Slice || k == reflect.Array {
-			panic("BUG: query does not support slice of slices")
-		}
-
 		val := make([]string, rval.Len())
 		for i := 0; i < len(val); i++ {
 			val[i] = valof1(rval.Index(i))
@@ -98,8 +86,7 @@ func valof(rval reflect.Value) []string {
 func valof1(rval reflect.Value) string {
 	switch rval.Kind() {
 	case reflect.Bool:
-		b := rval.Bool()
-		if b {
+		if rval.Bool() {
 			return "1"
 		}
 		return "0"
