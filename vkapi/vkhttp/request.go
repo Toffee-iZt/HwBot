@@ -38,8 +38,10 @@ func (b *RequestsBuilder) BuildMethod(vkmethod string, args Args, add ...string)
 	uribuf := bpool.Get()
 	uribuf.WriteString(string(*b))
 
-	uribuf.WriteByte('/')
-	uribuf.WriteString(vkmethod)
+	if vkmethod != "" {
+		uribuf.WriteByte('/')
+		uribuf.WriteString(vkmethod)
+	}
 
 	if args != nil {
 		uribuf.WriteByte('?')
@@ -79,7 +81,7 @@ func MakeQuery(args Args) *Query {
 
 func valof(rval reflect.Value) []string {
 	if k := rval.Kind(); k == reflect.Array || k == reflect.Slice {
-		k = rval.Elem().Type().Kind()
+		k = rval.Type().Elem().Kind()
 		if k == reflect.Slice || k == reflect.Array {
 			panic("BUG: query does not support slice of slices")
 		}

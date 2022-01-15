@@ -61,9 +61,12 @@ func (c *Client) Send(msg OutMessage) (int, error) {
 		"attachment": msg.Attachment,
 		"sticker_id": msg.StickerID,
 		"keyboard":   msg.Keyboard.Data(),
+	}
 
-		"reply_to":         msg.ReplyTo,
-		"forward_messages": msg.ForwardMessages,
+	if msg.ReplyTo != 0 {
+		args["reply_to"] = msg.ReplyTo
+	} else if len(msg.ForwardMessages) != 0 {
+		args["forward_messages"] = msg.ForwardMessages
 	}
 
 	if msg.DontParseLinks {

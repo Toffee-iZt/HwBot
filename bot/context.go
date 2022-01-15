@@ -34,7 +34,7 @@ func (c *Context) close() {
 	runtime.Goexit()
 }
 
-func (c *Context) errlog(err error, fmt string, a ...interface{}) {
+func (c *Context) errlog(fmt string, err error, a ...interface{}) {
 	if err != nil {
 		c.log.Error(fmt, a...)
 	}
@@ -46,17 +46,13 @@ func (c *Context) Reply(text string, attachments ...string) {
 		Message:    text,
 		Attachment: attachments,
 	})
-	c.errlog(vkerr, "simple reply error: %s %s", vkerr.Error(), rt.Caller().Function)
+	c.errlog("context reply error: %s %s", vkerr, rt.Caller().Function)
 	c.close()
 }
 
 // ReplyText replies to a message with a text and closes bridge.
 func (c *Context) ReplyText(text string) {
-	_, vkerr := c.SendMessage(vkapi.OutMessageContent{
-		Message: text,
-	})
-	c.errlog(vkerr, "simple reply error: %s %s", vkerr.Error(), rt.Caller().Function)
-	c.close()
+	c.Reply(text)
 }
 
 // ReplyError send error as vk message and closes context.

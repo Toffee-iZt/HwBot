@@ -38,7 +38,7 @@ var help = bot.Command{
 			for _, m := range mods {
 				for _, c := range m.Commands {
 					if strbytes.Has(c.Cmd, a[0]) {
-						ctx.ReplyText(fmt.Sprintf("%s - %s\nAliases: %s\n\n%s", c.Cmd[0], strings.Join(c.Cmd, ", "), c.Description, c.Help))
+						ctx.ReplyText(fmt.Sprintf("%s - %s\nAliases: %s\n\n%s", c.Cmd[0], c.Description, strings.Join(c.Cmd, ", "), c.Help))
 					}
 				}
 			}

@@ -67,10 +67,9 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
 
 	for {
 		req := builder.Build(args)
-
 		status, body, err := lp.vk.HTTP().DoContext(ctx, req)
 		if err != nil || status != vkhttp.StatusOK {
-			if err != context.Canceled {
+			if err != nil || err != context.Canceled {
 				err = fmt.Errorf("longpoll: %w", err)
 			}
 			lp.sync.ErrClose(&vkapi.Error{
@@ -78,9 +77,7 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
 				HTTPStatus: status,
 				Body:       body,
 			})
-			return
 		}
-
 		var res struct {
 			Ts      string  `json:"ts"`
 			Updates []Event `json:"updates"`
