@@ -24,14 +24,14 @@ const (
 
 // UsersGet returns detailed information on users.
 func (c *Client) UsersGet(userIds []UserID, nameCase string, fields ...string) ([]*User, error) {
-	args := vkargs{
-		"user_ids": userIds,
-	}
-	if len(fields) != 0 {
-		args["fields"] = fields
-	}
-	if nameCase != "" {
-		args["name_case"] = nameCase
+	args := struct {
+		UserIDs  []UserID `vkargs:"user_ids"`
+		Fields   []string `vkargs:"fields,omitempty"`
+		NameCase string   `vkargs:"name_case,omitempty"`
+	}{
+		userIds,
+		fields,
+		nameCase,
 	}
 
 	var users []*User

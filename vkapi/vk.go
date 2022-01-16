@@ -52,9 +52,8 @@ func (c *Client) HTTP() *vkhttp.Client {
 	return &c.client
 }
 
-func (c *Client) method(dst interface{}, method string, args vkargs) error {
-	args["v"] = Version
-	req := c.api.BuildMethod(method, args, "access_token", c.token)
+func (c *Client) method(dst interface{}, method string, args interface{}) error {
+	req := c.api.BuildMethod(method, args, "v", Version, "access_token", c.token)
 
 	var res struct {
 		Error *struct {
@@ -69,7 +68,7 @@ func (c *Client) method(dst interface{}, method string, args vkargs) error {
 	if res.Error != nil {
 		return &Error{
 			Method:  method,
-			Args:    args,
+			Args:    vkhttp.ArgsToMap(args),
 			Code:    res.Error.Code,
 			Message: res.Error.Message,
 		}
@@ -88,7 +87,7 @@ func (c *Client) method(dst interface{}, method string, args vkargs) error {
 // Error struct.
 type Error struct {
 	Method  string
-	Args    vkhttp.Args
+	Args    map[string]string
 	Code    int
 	Message string
 }
@@ -97,4 +96,4 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("vk.%s(%s) error %d %s", e.Method, e.Args, e.Code, e.Message)
 }
 
-type vkargs = vkhttp.Args
+type argmap map[string]interface{}

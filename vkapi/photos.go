@@ -11,7 +11,7 @@ type MessagesUploadServer struct {
 // When uploaded successfully, the photo can be saved using the photos.saveMessagesPhoto method.
 func (c *Client) PhotosGetMessagesUploadServer(peerID ID) (*MessagesUploadServer, error) {
 	var mus MessagesUploadServer
-	return &mus, c.method(&mus, "photos.getMessagesUploadServer", vkargs{
+	return &mus, c.method(&mus, "photos.getMessagesUploadServer", argmap{
 		"peer_id": peerID,
 	})
 }
@@ -20,7 +20,7 @@ func (c *Client) PhotosGetMessagesUploadServer(peerID ID) (*MessagesUploadServer
 // URL obtained with photos.getMessagesUploadServer method.
 func (c *Client) PhotosSaveMessagesPhoto(server int, photo, hash string) ([]*Photo, error) {
 	var smp []*Photo
-	return smp, c.method(&smp, "photos.saveMessagesPhoto", vkargs{
+	return smp, c.method(&smp, "photos.saveMessagesPhoto", argmap{
 		"server": server,
 		"photo":  photo,
 		"hash":   hash,

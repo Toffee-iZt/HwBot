@@ -17,7 +17,6 @@ COPY main.go ./
 COPY bot/ ./bot
 COPY common/ ./common
 COPY logger/ ./logger
-COPY shttp/ ./shttp
 COPY vkapi/ ./vkapi
 
 RUN make

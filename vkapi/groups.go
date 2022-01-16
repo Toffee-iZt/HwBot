@@ -16,7 +16,7 @@ type Group struct {
 // GroupsGetByID returns information about communities by their IDs.
 func (c *Client) GroupsGetByID(groupIds ...GroupID) ([]*Group, error) {
 	var groups []*Group
-	return groups, c.method(&groups, "groups.getById", vkargs{
+	return groups, c.method(&groups, "groups.getById", argmap{
 		"group_ids": groupIds,
 	})
 }
@@ -31,7 +31,7 @@ type LongPollServer struct {
 // GetLongPollServer returns the data needed to query a Long Poll server for events.
 func (c *Client) GetLongPollServer(groupID GroupID) (*LongPollServer, error) {
 	var lps LongPollServer
-	return &lps, c.method(&lps, "groups.getLongPollServer", vkargs{
+	return &lps, c.method(&lps, "groups.getLongPollServer", argmap{
 		"group_id": groupID,
 	})
 }
