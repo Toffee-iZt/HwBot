@@ -6,19 +6,74 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 )
 
 // StatusOK 200(OK).
 const StatusOK = fasthttp.StatusOK
 
+var bpool bytebufferpool.Pool
+
+// VkAPI is default vk method uri.
+const VkAPI string = "https://api.vk.com/method"
+
+// NewRequest returns empty request.
+func NewRequest() *fasthttp.Request {
+	return fasthttp.AcquireRequest()
+}
+
 // Client is fasthttp client.
 type Client struct {
 	fhttp fasthttp.Client
 }
 
+// LongPoll ...
+func (c *Client) LongPoll(ctx context.Context, server string, args interface{}, res interface{}) error {
+	uribuf := bpool.Get()
+	uribuf.WriteString(server)
+
+	if args != nil {
+		uribuf.WriteByte('?')
+		uribuf.B = appendArgs(uribuf.B, args)
+	}
+
+	req := fasthttp.AcquireRequest()
+	req.Header.SetMethod("GET")
+	req.Header.SetRequestURIBytes(uribuf.Bytes())
+
+	bpool.Put(uribuf)
+
+	return c.DoContext(ctx, req, res)
+}
+
+// Method ...
+func (c *Client) Method(method string, args interface{}, token, v string, res interface{}) {
+	uribuf := bpool.Get()
+	uribuf.WriteString(VkAPI)
+
+	uribuf.WriteByte('/')
+	uribuf.WriteString(method)
+
+	uribuf.WriteByte('?')
+	q := marshalArgs(args)
+	q.Set("access_token", token)
+	q.set("v", v)
+
+	uribuf.B = q.AppendBytes(uribuf.B)
+	releaseQuery(q)
+
+	req := fasthttp.AcquireRequest()
+	req.Header.SetMethod("POST")
+	req.Header.SetRequestURIBytes(uribuf.Bytes())
+
+	bpool.Put(uribuf)
+
+	c.Do(req, res)
+}
+
 // Do performs the given http request and parses response body.
-func (c *Client) Do(req *Request, obj interface{}) {
+func (c *Client) Do(req *fasthttp.Request, obj interface{}) {
 	defer fasthttp.ReleaseRequest(req)
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(resp)
@@ -37,7 +92,7 @@ func (c *Client) Do(req *Request, obj interface{}) {
 }
 
 // DoContext performs the given http request with context and parses response body.
-func (c *Client) DoContext(ctx context.Context, req *Request, obj interface{}) error {
+func (c *Client) DoContext(ctx context.Context, req *fasthttp.Request, obj interface{}) error {
 	reqCopy := fasthttp.AcquireRequest()
 	req.Header.CopyTo(&reqCopy.Header)
 	req.PostArgs().CopyTo(reqCopy.PostArgs())

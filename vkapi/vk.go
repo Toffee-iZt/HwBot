@@ -17,7 +17,6 @@ func Auth(accessToken string) (*Client, error) {
 	}
 
 	c := Client{
-		api:   vkhttp.NewRequestsBuilder("https://api.vk.com/method"),
 		token: accessToken,
 		rndID: -(1 << 31),
 	}
@@ -33,9 +32,7 @@ func Auth(accessToken string) (*Client, error) {
 
 // Client struct.
 type Client struct {
-	client vkhttp.Client
-
-	api vkhttp.RequestsBuilder
+	Client vkhttp.Client
 
 	token string
 	self  *Group
@@ -47,14 +44,7 @@ func (c *Client) Self() Group {
 	return *c.self
 }
 
-// HTTP returns http client.
-func (c *Client) HTTP() *vkhttp.Client {
-	return &c.client
-}
-
 func (c *Client) method(dst interface{}, method string, args interface{}) error {
-	req := c.api.BuildMethod(method, args, "v", Version, "access_token", c.token)
-
 	var res struct {
 		Error *struct {
 			Message string `json:"error_msg"`
@@ -63,7 +53,7 @@ func (c *Client) method(dst interface{}, method string, args interface{}) error 
 		Response json.RawMessage `json:"response"`
 	}
 
-	c.client.Do(req, &res)
+	c.Client.Method(method, args, c.token, Version, &res)
 
 	if res.Error != nil {
 		return &Error{

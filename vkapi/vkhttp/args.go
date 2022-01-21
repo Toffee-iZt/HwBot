@@ -17,18 +17,24 @@ func ArgsToMap(args interface{}) map[string]string {
 	return m
 }
 
+func appendArgs(b []byte, args interface{}) []byte {
+	q := marshalArgs(args)
+	b = q.AppendBytes(b)
+	releaseQuery(q)
+	return b
+}
+
 func marshalArgs(args interface{}) *query {
+	q := acquireQuery()
 	if args == nil {
-		return nil
+		return q
 	}
 	val := reflect.ValueOf(args)
 	switch val.Kind() {
 	case reflect.Struct:
-		q := acquireQuery()
 		marshalArgsStruct(q, val)
 		return q
 	case reflect.Map:
-		q := acquireQuery()
 		for iter := val.MapRange(); iter.Next(); {
 			q.Set(iter.Key().String(), valof(iter.Value().Elem())...)
 		}

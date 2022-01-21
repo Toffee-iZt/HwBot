@@ -55,23 +55,20 @@ func (lp *LongPoll) update() *vkapi.LongPollServer {
 
 func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
 	serv := lp.update()
-	builder := vkhttp.NewRequestsBuilder(serv.Server)
 	args := vkhttp.Args{
 		"act":  "a_check",
 		"wait": strconv.Itoa(wait),
+		"key":  serv.Key,
 		"ts":   serv.Ts,
 	}
 
 	for {
-		req := builder.Build(args, "key", serv.Key)
-
 		var res struct {
 			Ts      string  `json:"ts"`
 			Updates []Event `json:"updates"`
 			Failed  int     `json:"failed"`
 		}
-
-		ctxerr := lp.vk.HTTP().DoContext(ctx, req, &res)
+		ctxerr := lp.vk.Client.LongPoll(ctx, serv.Server, args, &res)
 		if ctxerr != nil {
 			lp.sync.ErrClose(ctxerr)
 			return

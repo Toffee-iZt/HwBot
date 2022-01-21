@@ -59,8 +59,16 @@ func (q *query) AppendBytes(dst []byte) []byte {
 	return dst
 }
 
-func (q *query) forceAppendArg(key, val string) {
+func (q *query) set(key, val string) {
 	n := len(q.args)
+	for i := 0; i < n; i++ {
+		kv := &q.args[i]
+		if key == string(kv.key) {
+			kv.val = append(kv.val[:0], val...)
+			return
+		}
+	}
+
 	if cap(q.args) > n {
 		q.args = q.args[:n+1]
 	} else {
@@ -69,17 +77,6 @@ func (q *query) forceAppendArg(key, val string) {
 	kv := &q.args[n]
 	kv.key = append(kv.key[:0], key...)
 	kv.val = append(kv.val[:0], val...)
-}
-
-func (q *query) set(key, val string) {
-	for i := 0; i < len(q.args); i++ {
-		kv := &q.args[i]
-		if key == string(kv.key) {
-			kv.val = append(kv.val[:0], val...)
-			return
-		}
-	}
-	q.forceAppendArg(key, val)
 }
 
 // Set sets 'key=value1,value2...' argument.
@@ -99,23 +96,6 @@ func (q *query) Set(key string, value ...string) {
 		}
 		q.set(key, string(q.buf))
 	}
-}
-
-// Add adds 'key=value' argument.
-//
-// Multiple values for the same key may be added.
-func (q *query) Add(key string, value string) {
-	for i := 0; i < len(q.args); i++ {
-		kv := &q.args[i]
-		if key == string(kv.key) {
-			if len(kv.val) > 0 {
-				kv.val = append(kv.val, ',')
-			}
-			kv.val = append(kv.val, value...)
-			return
-		}
-	}
-	q.forceAppendArg(key, value)
 }
 
 const hex = "0123456789ABCDEF"

@@ -32,8 +32,8 @@ func (c *Client) UploadMessagesPhoto(peerID ID, fname string, data io.Reader) (s
 
 // uploadMultipart uploads multipart data from file to uploadURL.
 func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data io.Reader) {
-	req := &vkhttp.Request{}
-	req.Header.SetMethod(vkhttp.POSTStr)
+	req := vkhttp.NewRequest()
+	req.Header.SetMethod("POST")
 	req.Header.SetRequestURI(uploadURL)
 
 	writer := multipart.NewWriter(req.BodyWriter())
@@ -43,5 +43,5 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname
 
 	req.Header.SetContentType(writer.FormDataContentType())
 
-	c.client.Do(req, dst)
+	c.Client.Do(req, dst)
 }
