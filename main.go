@@ -34,7 +34,7 @@ func main() {
 	log.Info("vk authorization")
 	vk, vkerr := vkapi.Auth(os.Getenv("VK_TOKEN"))
 	if vkerr != nil {
-		log.Error("vk auth: %s", vkerr.Error())
+		log.Error("vk auth: %s", vkerr.ErrorString())
 		return
 	}
 

@@ -40,7 +40,7 @@ type OutMessageContent struct {
 }
 
 // Send sends a message.
-func (c *Client) Send(msg OutMessage) (int, error) {
+func (c *Client) Send(msg OutMessage) (int, *Error) {
 	if msg.Message == "" && msg.Attachment == nil {
 		return 0, nil
 	}
@@ -78,14 +78,14 @@ type EventData struct {
 }
 
 // SendMessageEventAnswer sends event answer.
-func (c *Client) SendMessageEventAnswer(eventID string, userID UserID, peerID ID, eventData *EventData) error {
+func (c *Client) SendMessageEventAnswer(eventID string, userID UserID, peerID ID, eventData *EventData) *Error {
 	var data string
 	if eventData != nil {
 		m, _ := json.Marshal(eventData)
 		data = string(m)
 	}
 
-	return c.method(nil, "messages.sendMessageEventAnswer", argmap{
+	return c.method(nil, "messages.sendMessageEventAnswer", ArgsMap{
 		"event_id":   eventID,
 		"user_id":    userID,
 		"peer_id":    peerID,
@@ -112,17 +112,17 @@ type Member struct {
 }
 
 // GetConversationMembers returns a list of IDs of users participating in a conversation.
-func (c *Client) GetConversationMembers(peerID ID) (*Members, error) {
+func (c *Client) GetConversationMembers(peerID ID) (*Members, *Error) {
 	var mem Members
-	return &mem, c.method(&mem, "messages.getConversationMembers", argmap{
+	return &mem, c.method(&mem, "messages.getConversationMembers", ArgsMap{
 		"peer_id": peerID,
 	})
 }
 
 // RemoveChatUser allows the current user to leave a chat or, if the current user started the chat,
 // allows the user to remove another user from the chat.
-func (c *Client) RemoveChatUser(chatID ChatID, memberID ID) error {
-	return c.method(nil, "messages.removeChatUser", argmap{
+func (c *Client) RemoveChatUser(chatID ChatID, memberID ID) *Error {
+	return c.method(nil, "messages.removeChatUser", ArgsMap{
 		"chat_id":   chatID,
 		"member_id": memberID,
 	})

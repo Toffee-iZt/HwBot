@@ -23,7 +23,7 @@ const (
 )
 
 // UsersGet returns detailed information on users.
-func (c *Client) UsersGet(userIds []UserID, nameCase string, fields ...string) ([]*User, error) {
+func (c *Client) UsersGet(userIds []UserID, nameCase string, fields ...string) ([]*User, *Error) {
 	args := struct {
 		UserIDs  []UserID `vkargs:"user_ids"`
 		Fields   []string `vkargs:"fields,omitempty"`

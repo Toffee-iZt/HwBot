@@ -3,12 +3,10 @@ package vkapi
 import (
 	"io"
 	"mime/multipart"
-
-	"github.com/Toffee-iZt/HwBot/vkapi/vkhttp"
 )
 
 // UploadMessagesPhoto uploads photo from source and returns vk string.
-func (c *Client) UploadMessagesPhoto(peerID ID, fname string, data io.Reader) (string, error) {
+func (c *Client) UploadMessagesPhoto(peerID ID, fname string, data io.Reader) (string, *Error) {
 	mus, err := c.PhotosGetMessagesUploadServer(peerID)
 	if err != nil {
 		return "", err
@@ -32,9 +30,7 @@ func (c *Client) UploadMessagesPhoto(peerID ID, fname string, data io.Reader) (s
 
 // uploadMultipart uploads multipart data from file to uploadURL.
 func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data io.Reader) {
-	req := vkhttp.NewRequest()
-	req.Header.SetMethod("POST")
-	req.Header.SetRequestURI(uploadURL)
+	req := NewRequest(uploadURL, "POST")
 
 	writer := multipart.NewWriter(req.BodyWriter())
 	part, _ := writer.CreateFormFile(field, fname)
@@ -43,5 +39,5 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname
 
 	req.Header.SetContentType(writer.FormDataContentType())
 
-	c.Client.Do(req, dst)
+	c.Do(req, dst)
 }

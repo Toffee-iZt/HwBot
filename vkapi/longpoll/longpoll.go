@@ -6,7 +6,6 @@ import (
 
 	"github.com/Toffee-iZt/HwBot/common"
 	"github.com/Toffee-iZt/HwBot/vkapi"
-	"github.com/Toffee-iZt/HwBot/vkapi/vkhttp"
 )
 
 // New creates new longpoll instance.
@@ -48,14 +47,14 @@ func (lp *LongPoll) Run(ctx context.Context, wait int) <-chan Event {
 func (lp *LongPoll) update() *vkapi.LongPollServer {
 	s, err := lp.vk.GetLongPollServer(lp.vk.Self().ID)
 	if err != nil {
-		panic("longpoll: update error\n" + err.Error())
+		panic("longpoll: update error\n" + err.ErrorString())
 	}
 	return s
 }
 
 func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
 	serv := lp.update()
-	args := vkhttp.Args{
+	args := vkapi.ArgsMap{
 		"act":  "a_check",
 		"wait": strconv.Itoa(wait),
 		"key":  serv.Key,
@@ -68,7 +67,7 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
 			Updates []Event `json:"updates"`
 			Failed  int     `json:"failed"`
 		}
-		ctxerr := lp.vk.Client.LongPoll(ctx, serv.Server, args, &res)
+		ctxerr := lp.vk.GET(ctx, serv.Server, args, &res)
 		if ctxerr != nil {
 			lp.sync.ErrClose(ctxerr)
 			return
