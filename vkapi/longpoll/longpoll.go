@@ -47,7 +47,7 @@ func (lp *LongPoll) Run(ctx context.Context, wait int) <-chan Event {
 func (lp *LongPoll) update() *vkapi.LongPollServer {
 	s, err := lp.vk.GetLongPollServer(lp.vk.Self().ID)
 	if err != nil {
-		panic("longpoll: update error\n" + err.ErrorString())
+		panic("longpoll update error\n" + err.Error())
 	}
 	return s
 }

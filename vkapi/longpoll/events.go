@@ -56,11 +56,12 @@ type MessageEvent struct {
 	EventID string         `json:"event_id"`
 	UserID  vkapi.UserID   `json:"user_id"`
 	PeerID  vkapi.ID       `json:"peer_id"`
+
+	ConversationMessageID int `json:"conversation_message_id"`
 }
 
 // Message struct.
 type Message struct {
-	ID            int                `json:"id"`
 	Date          int64              `json:"date"`
 	FromID        vkapi.ID           `json:"from_id"`
 	PeerID        vkapi.ID           `json:"peer_id"`
@@ -70,9 +71,6 @@ type Message struct {
 	Reply         *shortMsg          `json:"reply_message"`
 	Payload       vkapi.JSONData     `json:"payload"`
 	ConvMessageID int                `json:"conversation_message_id"`
-	Out           int                `json:"out"`
-	Important     bool               `json:"important"`
-	IsHidden      bool               `json:"is_hidden"`
 	Action        *struct {
 		Type     string `json:"type"`
 		MemberID int    `json:"member_id"`

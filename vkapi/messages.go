@@ -35,15 +35,27 @@ type OutMessageContent struct {
 	DisableMentions bool `vkargs:"disable_mentions,omitempty"`
 }
 
-// Send sends a message.
-func (c *Client) Send(msg OutMessage) (int, *Error) {
-	if len(msg.Attachment) > 10 {
-		msg.Attachment = msg.Attachment[:10]
-	}
+// SendMessage sends a message.
+func (c *Client) SendMessage(msg OutMessage) *Error {
 	msg.randomID = atomic.AddInt32(&c.rndID, 1)
+	return c.method(nil, "messages.send", msg)
+}
 
-	var id int
-	return id, c.method(&id, "messages.send", msg)
+// EditMessage edits a message.
+func (c *Client) EditMessage(peerID ID, convMessageID int, content OutMessageContent) (bool, *Error) {
+	var edit = struct {
+		PeerID                ID  `vkargs:"peer_id"`
+		ConversationMessageID int `vkargs:"conversation_message_id"`
+
+		OutMessageContent `vkargs:"embed"`
+	}{
+		PeerID:                peerID,
+		ConversationMessageID: convMessageID,
+		OutMessageContent:     content,
+	}
+
+	var ok BoolInt
+	return bool(ok), c.method(&ok, "messages.edit", edit)
 }
 
 //

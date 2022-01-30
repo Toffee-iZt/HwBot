@@ -20,7 +20,7 @@ const Version = "5.120"
 // Auth returns vk authorized client.
 func Auth(accessToken string) (*Client, *Error) {
 	if accessToken == "" {
-		panic("vk: no access token provided")
+		panic("no vk access token provided")
 	}
 
 	c := Client{
@@ -86,15 +86,15 @@ func (c *Client) Do(req *fasthttp.Request, obj interface{}) {
 	defer fasthttp.ReleaseResponse(resp)
 	err := c.HTTP.Do(req, resp)
 	if err != nil {
-		panic(fmt.Sprintf("vk: request %s\n%s\n%s", err.Error(), string(req.RequestURI()), string(req.Body())))
+		panic(fmt.Sprintf("vk request %s\n%s\n%s", err.Error(), string(req.RequestURI()), string(req.Body())))
 	}
 	body := resp.SwapBody(nil)
 	if status := resp.StatusCode(); status != fasthttp.StatusOK {
-		panic(fmt.Sprintf("vk: http status %d\n%s", status, string(body)))
+		panic(fmt.Sprintf("vk http status %d\n%s", status, string(body)))
 	}
 	err = json.Unmarshal(body, obj)
 	if err != nil {
-		panic(fmt.Sprintf("vk: invalid body json format(%s)", err.Error()))
+		panic(fmt.Sprintf("vk invalid body json format(%s)", err.Error()))
 	}
 }
 
@@ -164,7 +164,7 @@ func (c *Client) method(dst interface{}, method string, args interface{}) *Error
 	if dst != nil {
 		jerr := json.Unmarshal(res.Response, dst)
 		if jerr != nil {
-			panic("vk: method response invalid format")
+			panic("vk method response invalid format")
 		}
 	}
 
@@ -179,8 +179,7 @@ type Error struct {
 	Message string
 }
 
-// ErrorString builds error string.
-func (e *Error) ErrorString() string {
+func (e *Error) Error() string {
 	return fmt.Sprintf("vk.%s(%s) error %d %s", e.Method, e.Args, e.Code, e.Message)
 }
 
@@ -214,7 +213,7 @@ func marshalArgs(args interface{}) *query {
 		}
 		return q
 	default:
-		panic("vkhttp: invalid args interface kind " + val.Kind().String())
+		panic("invalid vkhttp args kind " + val.Kind().String())
 	}
 }
 
@@ -273,7 +272,7 @@ func valof1(rval reflect.Value) string {
 	case reflect.String:
 		return rval.String()
 	default:
-		panic("BUG: query does not support type kind of field " + rval.Type().Name())
+		panic("vkargs does not support type kind of field " + rval.Type().Name())
 	}
 }
 
