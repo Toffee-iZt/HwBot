@@ -4,8 +4,8 @@ import "strconv"
 
 // vk types
 const (
-	AttTypePhoto        = "photo"
-	AttTypeAudioMessage = "audio_message"
+	AttachmentTypePhoto        = "photo"
+	AttachmentTypeAudioMessage = "audio_message"
 )
 
 // Attachment struct.
@@ -48,7 +48,7 @@ type Photo struct {
 }
 
 func (p *Photo) String() string {
-	return p.string(AttTypePhoto)
+	return p.string(AttachmentTypePhoto)
 }
 
 // AudioMessage struct.
@@ -62,5 +62,5 @@ type AudioMessage struct {
 }
 
 func (a *AudioMessage) String() string {
-	return a.string(AttTypeAudioMessage)
+	return a.string(AttachmentTypeAudioMessage)
 }

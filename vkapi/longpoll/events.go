@@ -26,9 +26,9 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 	e.Type = update.Type
 
 	switch e.Type {
-	case TypeMessageNew:
+	case EventTypeMessageNew:
 		e.Object = new(MessageNew)
-	case TypeMessageEvent:
+	case EventTypeMessageEvent:
 		e.Object = new(MessageEvent)
 	default:
 		e.Object = update.Raw
@@ -40,8 +40,8 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 
 //
 const (
-	TypeMessageNew   = "message_new"
-	TypeMessageEvent = "message_event"
+	EventTypeMessageNew   = "message_new"
+	EventTypeMessageEvent = "message_event"
 )
 
 // MessageNew struct.
@@ -52,11 +52,10 @@ type MessageNew struct {
 
 // MessageEvent struct.
 type MessageEvent struct {
-	Payload       vkapi.JSONData `json:"payload"`
-	EventID       string         `json:"event_id"`
-	ConvMessageID int            `json:"conversation_message_id"`
-	UserID        vkapi.UserID   `json:"user_id"`
-	PeerID        vkapi.ID       `json:"peer_id"`
+	Payload vkapi.JSONData `json:"payload"`
+	EventID string         `json:"event_id"`
+	UserID  vkapi.UserID   `json:"user_id"`
+	PeerID  vkapi.ID       `json:"peer_id"`
 }
 
 // Message struct.
@@ -69,6 +68,7 @@ type Message struct {
 	Attachments   []vkapi.Attachment `json:"attachments"`
 	Forward       []shortMsg         `json:"fwd_messages"`
 	Reply         *shortMsg          `json:"reply_message"`
+	Payload       vkapi.JSONData     `json:"payload"`
 	ConvMessageID int                `json:"conversation_message_id"`
 	Out           int                `json:"out"`
 	Important     bool               `json:"important"`

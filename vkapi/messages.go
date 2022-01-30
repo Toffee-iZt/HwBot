@@ -27,13 +27,9 @@ type OutMessageContent struct {
 	Attachment []string `vkargs:"attachment,omitempty"`
 	StickerID  int      `vkargs:"sticker_id,omitempty"`
 	Keyboard   JSONData `vkargs:"keyboard,omitempty"`
-	//Template map[string]interface{}
-	//Payload       map[string]interface{}
-	//ContentSource map[string]interface{} // ???
 
 	ReplyTo         int   `vkargs:"reply_to,omitempty"`
 	ForwardMessages []int `vkargs:"forward_messages,omitempty"`
-	//Forward common.JSONData
 
 	DontParseLinks  bool `vkargs:"dont_parse_links,omitempty"`
 	DisableMentions bool `vkargs:"disable_mentions,omitempty"`
@@ -41,10 +37,6 @@ type OutMessageContent struct {
 
 // Send sends a message.
 func (c *Client) Send(msg OutMessage) (int, *Error) {
-	if msg.Message == "" && msg.Attachment == nil {
-		return 0, nil
-	}
-
 	if len(msg.Attachment) > 10 {
 		msg.Attachment = msg.Attachment[:10]
 	}

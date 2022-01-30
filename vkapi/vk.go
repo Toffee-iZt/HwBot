@@ -24,6 +24,7 @@ func Auth(accessToken string) (*Client, *Error) {
 	}
 
 	c := Client{
+		HTTP:  &fasthttp.Client{},
 		token: accessToken,
 		rndID: -(1 << 31),
 	}
@@ -74,7 +75,7 @@ func (c *Client) buildURI(q *query, endpoint ...string) *fasthttp.Request {
 // GET ...
 func (c *Client) GET(ctx context.Context, endpoint string, args interface{}, res interface{}) error {
 	req := c.buildURI(marshalArgs(args), endpoint)
-	req.Header.SetMethod("GET")
+	req.Header.SetMethod(fasthttp.MethodGet)
 	return c.DoContext(ctx, req, res)
 }
 
@@ -139,7 +140,7 @@ func (c *Client) method(dst interface{}, method string, args interface{}) *Error
 	q.Set("v", Version)
 
 	req := c.buildURI(q, VkAPI, method)
-	req.Header.SetMethod("POST")
+	req.Header.SetMethod(fasthttp.MethodPost)
 
 	var res struct {
 		Error *struct {
@@ -178,16 +179,9 @@ type Error struct {
 	Message string
 }
 
+// ErrorString builds error string.
 func (e *Error) ErrorString() string {
 	return fmt.Sprintf("vk.%s(%s) error %d %s", e.Method, e.Args, e.Code, e.Message)
-}
-
-// NewRequest returns new request instance.
-func NewRequest(uri string, method string) *fasthttp.Request {
-	r := fasthttp.AcquireRequest()
-	r.SetRequestURI(uri)
-	r.Header.SetMethod(method)
-	return r
 }
 
 // ArgsMap is allias for string map.
@@ -350,11 +344,9 @@ func (q *query) AppendBytes(dst []byte) []byte {
 // Set sets 'key=value1,value2...' argument.
 func (q *query) Set(key string, value ...string) {
 	q.buf = q.buf[:0]
-	switch len(value) {
-	case 0:
-	case 1:
+	if len(value) == 1 {
 		q.buf = append(q.buf, value[0]...)
-	default:
+	} else {
 		for i, v := range value {
 			if i > 0 {
 				q.buf = append(q.buf, ',')

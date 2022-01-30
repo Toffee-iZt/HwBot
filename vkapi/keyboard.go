@@ -61,8 +61,8 @@ func (k *Keyboard) Data() JSONData {
 	return d
 }
 
-// AddRow adds line of buttons.
-func (k *Keyboard) AddRow() bool {
+// NextRow adds line of buttons.
+func (k *Keyboard) NextRow() bool {
 	if k.Inline && len(k.Buttons) >= KeyboardMaxInlineLines {
 		return false
 	}
@@ -79,18 +79,16 @@ func (k *Keyboard) add(b KeyboardButton) bool {
 	max := KeyboardMaxButtonsOnLine
 	for i := 0; i < l; i++ {
 		switch r[i].Action.Type {
-		case KeyboardButtonTypeVkPay:
+		case KeyboardButtonTypeVkPay, KeyboardButtonTypeLocation, KeyboardButtonTypeOpenApp:
 			max = 1
-		case KeyboardButtonTypeLocation, KeyboardButtonTypeOpenLink, KeyboardButtonTypeOpenApp:
-			if max > 2 {
-				max = 2
-			}
+		case KeyboardButtonTypeOpenLink:
+			max = 2
 		}
 	}
 	if l > max {
 		return false
 	}
-	k.Buttons[len(k.Buttons)-1] = append(r, b)
+	k.Buttons[len(k.Buttons)-1] = r
 	return true
 }
 

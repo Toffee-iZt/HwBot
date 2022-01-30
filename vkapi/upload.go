@@ -3,6 +3,8 @@ package vkapi
 import (
 	"io"
 	"mime/multipart"
+
+	"github.com/valyala/fasthttp"
 )
 
 // UploadMessagesPhoto uploads photo from source and returns vk string.
@@ -28,9 +30,10 @@ func (c *Client) UploadMessagesPhoto(peerID ID, fname string, data io.Reader) (s
 	return saved[0].String(), nil
 }
 
-// uploadMultipart uploads multipart data from file to uploadURL.
 func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname string, data io.Reader) {
-	req := NewRequest(uploadURL, "POST")
+	req := fasthttp.AcquireRequest()
+	req.SetRequestURI(uploadURL)
+	req.Header.SetMethod(fasthttp.MethodPost)
 
 	writer := multipart.NewWriter(req.BodyWriter())
 	part, _ := writer.CreateFormFile(field, fname)

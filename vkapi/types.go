@@ -60,6 +60,12 @@ func (c ChatID) ToID() ID {
 // JSONData represents json as string.
 type JSONData string
 
+// UnmarshalJSON implementation.
+func (j *JSONData) UnmarshalJSON(data []byte) error {
+	*j = JSONData(data)
+	return nil
+}
+
 // NewJSONData creates new JSONData from string.
 func NewJSONData(s string) (JSONData, bool) {
 	ok := json.Valid(strbytes.S2b(s))
