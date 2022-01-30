@@ -78,6 +78,7 @@ func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
 			args["ts"] = res.Ts
 		case 2, 3:
 			serv = lp.update()
+			args["key"] = serv.Key
 			if res.Failed == 3 {
 				args["ts"] = serv.Ts
 			}
