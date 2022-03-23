@@ -2,85 +2,87 @@ package bot
 
 import (
 	"fmt"
-	"io"
 	"runtime"
 
 	"github.com/Toffee-iZt/HwBot/common/rt"
-	"github.com/Toffee-iZt/HwBot/logger"
 	"github.com/Toffee-iZt/HwBot/vkapi"
 )
 
-func makeContext(b *Bot, peerID vkapi.ID, cmd *command, data *NewMessage) *Context {
-	return &Context{
-		peer: peerID,
-		bot:  b,
-		log:  cmd.log,
-		cmd:  cmd.Command,
-		data: data,
-	}
-}
-
-// Context struct.
-type Context struct {
-	peer vkapi.ID
+type eventctx struct {
+	Conv *Conversation
 	bot  *Bot
-	log  *logger.Logger
-	cmd  *Command
-	data *NewMessage
+	mod  *Module
 }
 
-func (c *Context) close() {
-	c.peer = 0
+func (c *eventctx) close() {
+	c.Conv = nil
 	c.bot = nil
-	c.cmd = nil
+	c.mod = nil
 	runtime.Goexit()
 }
 
-func (c *Context) errlog(f string, err error, a ...interface{}) {
-	if err != nil {
-		c.log.Error(f, err.Error(), fmt.Sprint(a...))
+func (c *eventctx) errlog(f string, vkerr *vkapi.Error, a ...interface{}) {
+	if vkerr != nil {
+		c.mod.log.Error(f, vkerr.Error(), fmt.Sprint(a...))
 	}
 }
 
-// Reply replies to a message with a text and closes context.
-func (c *Context) Reply(text string, attachments ...string) {
-	_, vkerr := c.SendMessage(vkapi.OutMessageContent{
-		Message:    text,
-		Attachment: attachments,
+// Bot returns bot instance.
+func (c *eventctx) Bot() *Bot {
+	return c.bot
+}
+
+// API returns vk client.
+func (c *eventctx) API() *vkapi.Client {
+	return c.bot.vk
+}
+
+// KeyboardGenerator returns empty keyboard generator.
+func (c *eventctx) KeyboardGenerator(oneTime bool, inline bool) *Keyboard {
+	kb := vkapi.NewKeyboard(oneTime, inline)
+	kb.NextRow()
+	return &Keyboard{
+		mod: c.mod,
+		kb:  kb,
+	}
+}
+
+// ReplyMessage replies with a text and closes context.
+func (c *eventctx) ReplyMessage(text string, attachments ...*Attachment) {
+	vkerr := c.Conv.SendMessage(Message{
+		Text:        text,
+		Attachments: attachments,
 	})
 	c.errlog("context reply error: %s %s", vkerr, rt.Caller().Function)
 	c.close()
 }
 
+// MessageContext struct.
+type MessageContext struct {
+	eventctx
+}
+
 // ReplyText replies to a message with a text and closes context.
-func (c *Context) ReplyText(text string) {
-	c.Reply(text)
+func (c *MessageContext) ReplyText(text string) {
+	c.ReplyMessage(text)
 }
 
 // ReplyError send error as vk message and closes context.
-func (c *Context) ReplyError(f string, a ...interface{}) {
+func (c *MessageContext) ReplyError(f string, a ...interface{}) {
 	c.ReplyText(fmt.Sprintf(f, a...))
 }
 
-// BotInstance returns bot instance.
-func (c *Context) BotInstance() *Bot {
-	return c.bot
+// CallbackContext struct.
+type CallbackContext struct {
+	eventctx
+
+	eventID string
+	userID  vkapi.UserID
 }
 
-// UploadAttachment uploads attachment and returns vk attachment string.
-func (c *Context) UploadAttachment(name string, data io.Reader) (string, error) {
-	return c.bot.vk.UploadMessagesPhoto(c.peer, name, data)
-}
-
-// GetMembers returns a list of conversation users.
-func (c *Context) GetMembers() (*vkapi.Members, error) {
-	return c.bot.vk.GetConversationMembers(c.peer)
-}
-
-// SendMessage sends a message.
-func (c *Context) SendMessage(msg vkapi.OutMessageContent) (int, error) {
-	return c.bot.vk.Send(vkapi.OutMessage{
-		PeerID:            c.peer,
-		OutMessageContent: msg,
-	})
+// ReplyCallback replies to a callback event and closes context.
+func (c *CallbackContext) ReplyCallback(data *vkapi.EventData) {
+	vkerr := c.Conv.api.SendMessageEventAnswer(c.eventID, c.userID, c.Conv.peer, data)
+	c.errlog("callback context reply error: %s %s", vkerr, rt.Caller().Function)
+	c.close()
 }

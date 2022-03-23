@@ -24,7 +24,7 @@ var citgen = bot.Command{
 	Help:        "/citen и ответить или переслать сообщение",
 	InPrivate:   true,
 	InChat:      true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		var fromID vkapi.ID
 		var text string
 		var t int64
@@ -47,7 +47,7 @@ var citgen = bot.Command{
 			text = strings.Join(a, " ")
 		}
 
-		api := ctx.BotInstance().API()
+		api := ctx.API()
 
 		name, photo, err := getNamePhoto(api, fromID)
 		if err != nil {
@@ -61,19 +61,7 @@ var citgen = bot.Command{
 			return
 		}
 
-		s, err := ctx.UploadAttachment("citgen.png", data)
-		if err != nil {
-			log.Error("citgen upload: %s", err.Error())
-			return
-		}
-
-		_, vkerr := ctx.SendMessage(vkapi.OutMessageContent{
-			Attachment: []string{s},
-		})
-		if vkerr != nil {
-			log.Error("citgen send: %s", vkerr.Error())
-			return
-		}
+		ctx.ReplyMessage("", bot.NewAttachment("citgen.png", data))
 	},
 }
 

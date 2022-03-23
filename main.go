@@ -7,12 +7,12 @@ import (
 	"syscall"
 
 	"github.com/Toffee-iZt/HwBot/bot"
-	"github.com/Toffee-iZt/HwBot/bot/modules/builtin"
-	"github.com/Toffee-iZt/HwBot/bot/modules/debug"
-	"github.com/Toffee-iZt/HwBot/bot/modules/images"
-	"github.com/Toffee-iZt/HwBot/bot/modules/random"
-	"github.com/Toffee-iZt/HwBot/bot/modules/yalm"
 	"github.com/Toffee-iZt/HwBot/logger"
+	"github.com/Toffee-iZt/HwBot/modules/builtin"
+	"github.com/Toffee-iZt/HwBot/modules/debug"
+	"github.com/Toffee-iZt/HwBot/modules/images"
+	"github.com/Toffee-iZt/HwBot/modules/random"
+	"github.com/Toffee-iZt/HwBot/modules/yalm"
 	"github.com/Toffee-iZt/HwBot/vkapi"
 	"github.com/Toffee-iZt/wfs"
 )

@@ -3,7 +3,6 @@ package bot
 import (
 	"context"
 	"errors"
-	"strings"
 
 	"github.com/Toffee-iZt/HwBot/common"
 	"github.com/Toffee-iZt/HwBot/logger"
@@ -17,7 +16,7 @@ func New(vk *vkapi.Client, l *logger.Logger) *Bot {
 		log:      l,
 		vk:       vk,
 		lp:       longpoll.New(vk),
-		commands: make(map[string]*command),
+		commands: make(map[string]*Command),
 	}
 }
 
@@ -25,19 +24,13 @@ func New(vk *vkapi.Client, l *logger.Logger) *Bot {
 type Bot struct {
 	sync common.Sync
 
-	log    *logger.Logger
-	modlog *logger.Logger
-	vk     *vkapi.Client
-	lp     *longpoll.LongPoll
+	log *logger.Logger
+	vk  *vkapi.Client
+	lp  *longpoll.LongPoll
 
 	modules []*Module
 
-	commands map[string]*command
-}
-
-type command struct {
-	*Command
-	*Module
+	commands map[string]*Command
 }
 
 // Module struct.
@@ -45,19 +38,21 @@ type Module struct {
 	Name      string
 	Init      func(*logger.Logger) bool
 	Terminate func()
+	Callback  func(ctx *CallbackContext, user vkapi.UserID, msg int, payload vkapi.JSONData)
 	Commands  []*Command
 	log       *logger.Logger
 }
 
 // Command respresents conversation command.
 type Command struct {
-	Run         func(*Context, *NewMessage, []string)
+	Run         func(*MessageContext, *NewMessage, []string)
 	Cmd         []string
 	Description string
 	Help        string
 	InPrivate   bool
 	InChat      bool
 	NoPrefix    bool
+	module      *Module
 }
 
 func (b *Bot) close(err error) {
@@ -93,25 +88,22 @@ func (b *Bot) Run(ctx context.Context, sync bool, mods ...*Module) error {
 	b.modules = make([]*Module, 0, len(mods))
 
 	b.log.Info("loading modules")
-	b.modlog = b.log.Child("MODULES")
+	modlog := b.log.Child("MODULES")
 	for _, m := range mods {
-		m.log = b.modlog.Child(m.Name)
+		m.log = modlog.Child(m.Name)
 		if m.Init != nil && !m.Init(m.log) {
-			b.modlog.Warn(`module "%s" init failed`, m.Name)
+			m.log.Warn("init failed")
 			continue
 		}
 
 		for _, cmd := range m.Commands {
-			c := &command{
-				Command: cmd,
-				Module:  m,
-			}
+			cmd.module = m
 			for _, alias := range cmd.Cmd {
-				b.commands[alias] = c
+				b.commands[alias] = cmd
 			}
 		}
 		b.modules = append(b.modules, m)
-		b.modlog.Info(`module "%s" inited`, m.Name)
+		m.log.Info("init successful")
 	}
 
 	if sync {
@@ -127,7 +119,14 @@ func (b *Bot) run(ctx context.Context) {
 	for {
 		select {
 		case e := <-ch:
-			go b.handle(ctx, e)
+			go func() {
+				switch e.Type {
+				case longpoll.EventTypeMessageEvent:
+					b.onCallback(e.Object.(*longpoll.MessageEvent))
+				case longpoll.EventTypeMessageNew:
+					b.onMessage(e.Object.(*longpoll.MessageNew))
+				}
+			}()
 		case <-b.lp.Done():
 			b.close(b.lp.Err())
 			return
@@ -135,59 +134,7 @@ func (b *Bot) run(ctx context.Context) {
 	}
 }
 
-func (b *Bot) handle(ctx context.Context, e longpoll.Event) {
-	switch e.Type {
-	case longpoll.TypeMessageEvent:
-		// TODO
-		//cbNew := e.Object.(*longpoll.MessageEvent)
-		//p, err := events.ParsePayload(cbNew.Payload)
-		//if err != nil || p == nil || p.Module == "" {
-		//	b.log.Warn("parsing message payload: empty or invalid format\n%d in %d\n%s", cbNew.UserID, cbNew.PeerID, string(cbNew.Payload))
-		//}
-		//mod, ok := b.modules[p.Module]
-		//if !ok {
-		//	b.log.Warn("parsing message payload: invalid module name\n%d in %d\n%s", cbNew.UserID, cbNew.PeerID, string(cbNew.Payload))
-		//}
-		//mod.Process()
-	case longpoll.TypeMessageNew:
-		msgNew := e.Object.(*longpoll.MessageNew)
-
-		cmd, args := b.getCommand(&msgNew.Message)
-		if cmd == nil {
-			return
-		}
-
-		bctx := makeContext(b, msgNew.Message.PeerID, cmd, msgNew)
-
-		id := int(msgNew.Message.PeerID)
-		if id > 2e9 && !cmd.InChat || id < 2e9 && !cmd.InPrivate {
-			bctx.ReplyText("Команда недоступна в данном типе чата")
-		}
-
-		cmd.Run(bctx, msgNew, args)
-	}
-}
-
-// CommandPrefixes are the characters with which commands must begin.
-const CommandPrefixes = "/!"
-
-func (b *Bot) getCommand(msg *longpoll.Message) (*command, []string) {
-	if n := len(msg.Text); n > 1 && strings.IndexByte(CommandPrefixes, msg.Text[0]) != -1 {
-		if n > 300 {
-			msg.Text = msg.Text[:300]
-		}
-		s := strings.Split(msg.Text, " ")
-		return b.commands[s[0][1:]], s[1:]
-	}
-	return nil, nil
-}
-
 // ModList returns loaded modules list.
 func (b *Bot) ModList() []*Module {
 	return b.modules
-}
-
-// API returns vk api instance.
-func (b *Bot) API() *vkapi.Client {
-	return b.vk
 }

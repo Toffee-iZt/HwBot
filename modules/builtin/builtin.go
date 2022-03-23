@@ -19,6 +19,7 @@ var Module = bot.Module{
 		return true
 	},
 	Terminate: nil,
+	Callback:  nil,
 	Commands: []*bot.Command{
 		&help,
 		&about,
@@ -36,8 +37,8 @@ var help = bot.Command{
 	Help:        "",
 	InPrivate:   true,
 	InChat:      true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		mods := ctx.BotInstance().ModList()
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+		mods := ctx.Bot().ModList()
 		if len(a) > 0 {
 			for _, m := range mods {
 				for _, c := range m.Commands {
@@ -67,7 +68,7 @@ var about = bot.Command{
 	Help:        "",
 	InPrivate:   true,
 	InChat:      true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, _ []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, _ []string) {
 		ctx.ReplyText(fmt.Sprintln(
 			"HwBot\nVersion: debug\nSource code: github.com/Toffee-iZt/HwBot\n",
 			"\n\nStart time:", start.Format("02 Jan 2006 15:04:05"),
@@ -83,7 +84,7 @@ var ping = bot.Command{
 	Help:        "",
 	InChat:      true,
 	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		ctx.ReplyText("понг")
 	},
 }

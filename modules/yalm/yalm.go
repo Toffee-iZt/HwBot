@@ -50,7 +50,7 @@ var yalm = bot.Command{
 	Help:        balaboba.About + help,
 	InChat:      true,
 	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		if len(a) == 0 {
 			ctx.ReplyText(help)
 		}

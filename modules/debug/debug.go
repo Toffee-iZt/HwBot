@@ -38,7 +38,7 @@ var debug = bot.Command{
 	Help:        "/debug [gc] - информация об используемой памяти (аргумент gc запустит полную сборку мусора)",
 	InChat:      true,
 	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		var gc bool
 		if len(a) > 0 {
 			switch a[0] {
@@ -85,21 +85,17 @@ var testembed = bot.Command{
 	Help:        "",
 	InChat:      true,
 	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		f, err := resFs.Open("resources/gopher.png")
 		if err != nil {
 			ctx.ReplyText(err.Error())
 		}
-		stat, err := f.Stat()
+		att, err := bot.NewAttachmentFile(f)
+		f.Close()
 		if err != nil {
 			ctx.ReplyText(err.Error())
 		}
-		s, err := ctx.UploadAttachment(stat.Name(), f)
-		if err != nil {
-			log.Error("upload photo error: %s", err.Error())
-			return
-		}
-		ctx.Reply("", s)
+		ctx.ReplyMessage("", att)
 	},
 }
 
@@ -109,7 +105,7 @@ var vkslow = bot.Command{
 	Help:        "",
 	InChat:      true,
 	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		n := time.Now().Unix()
 		p := n - msg.Message.Date
 		if p <= 2 {

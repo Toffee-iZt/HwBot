@@ -115,22 +115,20 @@ func (k *Keyboard) AddLocation(payload JSONData) bool {
 }
 
 // AddVkPay adds a VKPay button to the last row.
-func (k *Keyboard) AddVkPay(payload JSONData, hash string) bool {
+func (k *Keyboard) AddVkPay(hash string) bool {
 	return k.add(KeyboardButton{
 		Action: KeyboardAction{
-			Type:    KeyboardButtonTypeVkPay,
-			Payload: payload,
-			Hash:    hash,
+			Type: KeyboardButtonTypeVkPay,
+			Hash: hash,
 		},
 	})
 }
 
 // AddOpenApp adds a button with link to the vkapp to the last row.
-func (k *Keyboard) AddOpenApp(payload JSONData, appID, ownerID int, hash string) bool {
+func (k *Keyboard) AddOpenApp(appID, ownerID int, hash string) bool {
 	return k.add(KeyboardButton{
 		Action: KeyboardAction{
 			Type:    KeyboardButtonTypeOpenApp,
-			Payload: payload,
 			AppID:   appID,
 			OwnerID: ownerID,
 			Hash:    hash,
@@ -139,13 +137,12 @@ func (k *Keyboard) AddOpenApp(payload JSONData, appID, ownerID int, hash string)
 }
 
 // AddOpenLink adds a button with external link to the last row.
-func (k *Keyboard) AddOpenLink(payload JSONData, label string, link string) bool {
+func (k *Keyboard) AddOpenLink(label string, link string) bool {
 	return k.add(KeyboardButton{
 		Action: KeyboardAction{
-			Type:    KeyboardButtonTypeOpenLink,
-			Payload: payload,
-			Label:   label,
-			Link:    link,
+			Type:  KeyboardButtonTypeOpenLink,
+			Label: label,
+			Link:  link,
 		},
 	})
 }

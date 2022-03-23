@@ -31,8 +31,8 @@ var list = bot.Command{
 		"\nНапример /список 12 задротов - список из 12 участников",
 	InChat:    true,
 	InPrivate: false,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		members, err := ctx.GetMembers()
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+		members, err := ctx.Conv.GetMembers()
 		if err != nil {
 			ctx.ReplyError("У бота недостаточно прав доступа для выполнения команды")
 		}
@@ -71,7 +71,7 @@ var number = bot.Command{
 		"\nmax также принимает 2(0b), 8(0 или 0o), 16(0x) системы счисления",
 	InChat:    true,
 	InPrivate: true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		var max int64 = 100
 		if len(a) > 0 {
 			num := a[0]
@@ -91,8 +91,8 @@ var who = bot.Command{
 	Help:        "/who <string>",
 	InChat:      true,
 	InPrivate:   false,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		members, err := ctx.GetMembers()
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+		members, err := ctx.Conv.GetMembers()
 		if err != nil {
 			ctx.ReplyText("У бота недостаточно прав доступа для выполнения команды")
 			return
@@ -115,7 +115,7 @@ var flip = bot.Command{
 	Help:        "",
 	InChat:      true,
 	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		var r string
 		if myRand.Intn(2) == 1 {
 			r = "Выпал орёл"
@@ -132,7 +132,7 @@ var info = bot.Command{
 	Help:        "/info <событие> - случайная вероятность события",
 	InChat:      true,
 	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		if len(a) == 0 {
 			ctx.ReplyText("Укажите событие")
 			return
@@ -149,7 +149,7 @@ var when = bot.Command{
 	Help:        "/when <событие> - случайная дата события",
 	InChat:      true,
 	InPrivate:   true,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
 		if len(a) == 0 {
 			ctx.ReplyText("Укажите событие")
 			return

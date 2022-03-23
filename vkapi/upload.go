@@ -42,5 +42,5 @@ func (c *Client) uploadMultipart(dst interface{}, uploadURL, field string, fname
 
 	req.Header.SetContentType(writer.FormDataContentType())
 
-	c.Do(req, dst)
+	c.do(req, dst)
 }
