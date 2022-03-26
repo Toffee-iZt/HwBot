@@ -36,23 +36,11 @@ type Bot struct {
 // Module struct.
 type Module struct {
 	Name      string
-	Init      func(*logger.Logger) bool
+	Init      func() error
 	Terminate func()
-	Callback  func(ctx *CallbackContext, user vkapi.UserID, msg int, payload vkapi.JSONData)
+	Callback  func(ctx *CallbackContext, payload vkapi.JSONData)
 	Commands  []*Command
 	log       *logger.Logger
-}
-
-// Command respresents conversation command.
-type Command struct {
-	Run         func(*MessageContext, *NewMessage, []string)
-	Cmd         []string
-	Description string
-	Help        string
-	InPrivate   bool
-	InChat      bool
-	NoPrefix    bool
-	module      *Module
 }
 
 func (b *Bot) close(err error) {
@@ -91,9 +79,12 @@ func (b *Bot) Run(ctx context.Context, sync bool, mods ...*Module) error {
 	modlog := b.log.Child("MODULES")
 	for _, m := range mods {
 		m.log = modlog.Child(m.Name)
-		if m.Init != nil && !m.Init(m.log) {
-			m.log.Warn("init failed")
-			continue
+		if m.Init != nil {
+			err := m.Init()
+			if err != nil {
+				m.log.Error("init failed: %s", err.Error())
+				continue
+			}
 		}
 
 		for _, cmd := range m.Commands {

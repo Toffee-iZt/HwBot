@@ -6,22 +6,15 @@ import (
 	"strings"
 
 	"github.com/Toffee-iZt/HwBot/bot"
-	"github.com/Toffee-iZt/HwBot/logger"
 	"github.com/Toffee-iZt/balaboba"
 )
 
 // Module ...
 var Module = bot.Module{
 	Name: "yalm",
-	Init: func(l *logger.Logger) bool {
-		log = l
+	Init: func() error {
 		client = balaboba.New()
-		err := client.Options()
-		if err != nil {
-			log.Error("init error: %s", err.Error())
-			return false
-		}
-		return true
+		return client.Options()
 	},
 	Commands: []*bot.Command{
 		&yalm,
@@ -31,8 +24,6 @@ var Module = bot.Module{
 /////////////////////////////////////////////
 
 var client *balaboba.Client
-
-var log *logger.Logger
 
 const pErr = "Произошла ошибка в работе бота. Разработчик уже знает об этом, в скором времени будет пофикшено."
 const apiErrorFmt = "Произошла ошибка %s (%d) при работе с API балабобы. Такое случается, так как не изучены все аспекты работы API. Если вы знаете причину и как это исправить - напишите разработчику."
@@ -48,12 +39,12 @@ var yalm = bot.Command{
 	Cmd:         []string{"yalm"},
 	Description: "yandex balaboba (yalm)",
 	Help:        balaboba.About + help,
-	InChat:      true,
-	InPrivate:   true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options:     bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		if len(a) == 0 {
 			ctx.ReplyText(help)
 		}
+		log := ctx.Log()
 		switch a[0] {
 		case "warns":
 			ctx.ReplyText(warns)

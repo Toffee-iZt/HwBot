@@ -7,16 +7,15 @@ import (
 
 	"github.com/Toffee-iZt/HwBot/bot"
 	"github.com/Toffee-iZt/HwBot/common/strbytes"
-	"github.com/Toffee-iZt/HwBot/logger"
 	"github.com/Toffee-iZt/HwBot/vkapi/vkutils"
 )
 
 // Module ...
 var Module = bot.Module{
 	Name: "random",
-	Init: func(_ *logger.Logger) bool {
+	Init: func() error {
 		myRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-		return true
+		return nil
 	},
 	Commands: []*bot.Command{&list, &number, &who, &flip, &info, &when},
 }
@@ -29,9 +28,8 @@ var list = bot.Command{
 	Help: "/список умных - список из 5 рандомных участников" +
 		"\nПосле команды можно указать длину списка" +
 		"\nНапример /список 12 задротов - список из 12 участников",
-	InChat:    true,
-	InPrivate: false,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options: bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		members, err := ctx.Conv.GetMembers()
 		if err != nil {
 			ctx.ReplyError("У бота недостаточно прав доступа для выполнения команды")
@@ -67,11 +65,9 @@ var number = bot.Command{
 	Cmd:         []string{"rand", "roll"},
 	Description: "Рандомное число",
 	Help: "/rand - рандомное число [0, 100]" +
-		"\n/rand <max> - рандомное число [0, max] (0 < max <= maxInt64)" +
-		"\nmax также принимает 2(0b), 8(0 или 0o), 16(0x) системы счисления",
-	InChat:    true,
-	InPrivate: true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+		"\n/rand <max> - рандомное число [0, max] (0 < max <= maxInt64)",
+	Options: bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var max int64 = 100
 		if len(a) > 0 {
 			num := a[0]
@@ -89,9 +85,8 @@ var who = bot.Command{
 	Cmd:         []string{"who", "кто"},
 	Description: "Выбрать рандомного участника",
 	Help:        "/who <string>",
-	InChat:      true,
-	InPrivate:   false,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options:     bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		members, err := ctx.Conv.GetMembers()
 		if err != nil {
 			ctx.ReplyText("У бота недостаточно прав доступа для выполнения команды")
@@ -113,9 +108,8 @@ var flip = bot.Command{
 	Cmd:         []string{"flip", "флип", "монетка"},
 	Description: "Подбросить монетку",
 	Help:        "",
-	InChat:      true,
-	InPrivate:   true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options:     bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var r string
 		if myRand.Intn(2) == 1 {
 			r = "Выпал орёл"
@@ -130,9 +124,8 @@ var info = bot.Command{
 	Cmd:         []string{"info", "инфа"},
 	Description: "Вероятность события",
 	Help:        "/info <событие> - случайная вероятность события",
-	InChat:      true,
-	InPrivate:   true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options:     bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		if len(a) == 0 {
 			ctx.ReplyText("Укажите событие")
 			return
@@ -147,9 +140,8 @@ var when = bot.Command{
 	Cmd:         []string{"when", "когда"},
 	Description: "Когда произойдет событие",
 	Help:        "/when <событие> - случайная дата события",
-	InChat:      true,
-	InPrivate:   true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options:     bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		if len(a) == 0 {
 			ctx.ReplyText("Укажите событие")
 			return

@@ -5,22 +5,14 @@ import (
 	"image"
 
 	"github.com/Toffee-iZt/HwBot/bot"
-	"github.com/Toffee-iZt/HwBot/logger"
 	"github.com/nfnt/resize"
 	"github.com/valyala/fasthttp"
 )
 
 var Module = bot.Module{
-	Name: "images",
-	Init: func(l *logger.Logger) bool {
-		log = l
-		return true
-	},
-	Terminate: nil,
-	Commands:  []*bot.Command{&citgen},
+	Name:     "images",
+	Commands: []*bot.Command{&citgen},
 }
-
-var log *logger.Logger
 
 var dlClient fasthttp.Client
 

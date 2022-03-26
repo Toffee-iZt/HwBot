@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -33,6 +34,7 @@ func NewWriterFile(path string) (*Writer, error) {
 
 // Writer struct.
 type Writer struct {
+	l time.Time
 	w io.Writer
 	b []byte
 	m sync.Mutex

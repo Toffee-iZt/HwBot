@@ -22,9 +22,8 @@ var citgen = bot.Command{
 	Cmd:         []string{"citgen"},
 	Description: "Генерация цитаты",
 	Help:        "/citen и ответить или переслать сообщение",
-	InPrivate:   true,
-	InChat:      true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options:     bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var fromID vkapi.ID
 		var text string
 		var t int64
@@ -48,6 +47,7 @@ var citgen = bot.Command{
 		}
 
 		api := ctx.API()
+		log := ctx.Log()
 
 		name, photo, err := getNamePhoto(api, fromID)
 		if err != nil {

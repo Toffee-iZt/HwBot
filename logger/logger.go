@@ -17,23 +17,18 @@ func New(w *Writer, name string) *Logger {
 
 // Logger struct.
 type Logger struct {
-	last time.Time
 	out  *Writer
 	name string
 }
 
 // Child ...
 func (l *Logger) Child(name string) *Logger {
-	newl := *l
-	newl.name = newl.name + "::" + name
-	return &newl
+	return New(l.out, l.name+"::"+name)
 }
 
 // Copy ...
 func (l *Logger) Copy(name string) *Logger {
-	newl := *l
-	newl.name = name
-	return &newl
+	return New(l.out, name)
 }
 
 // SetWriter ...
@@ -50,21 +45,9 @@ func (l *Logger) log(pref string, pcol *color.Color, f string, v ...interface{})
 	w.m.Lock()
 
 	buf := l.printTime(w.b[:0], w.c)
-
-	if w.c {
-		buf = append(buf, pcol.Sprint(pref)...)
-	} else {
-		buf = append(buf, pref...)
-	}
-	buf = append(buf, ' ')
-
+	buf = l.append(buf, pref, pcol)
 	if l.name != "" {
-		if w.c {
-			buf = append(buf, namecol.Sprint(l.name)...)
-		} else {
-			buf = append(buf, l.name...)
-		}
-		buf = append(buf, ' ')
+		buf = l.append(buf, l.name, namecol)
 	}
 
 	buf = append(buf, fmt.Sprintf(f, v...)...)
@@ -78,16 +61,20 @@ func (l *Logger) log(pref string, pcol *color.Color, f string, v ...interface{})
 
 func (l *Logger) printTime(buf []byte, col bool) []byte {
 	t := time.Now()
-	_, nm, _ := t.Clock()
-	if _, m, _ := l.last.Clock(); m != nm || t.Sub(l.last) > time.Minute {
-		l.last = t
-		tstr := t.Format("02.01.2006 15:04\n")
-		if col {
-			tstr = timecol.Sprint(tstr)
-		}
-		return append(buf, tstr...)
+	if past := t.Sub(l.out.l); past > time.Minute {
+		l.out.l = t
+		return l.append(buf, t.Format("02.01.2006 15:04\n"), timecol)
 	}
 	return buf
+}
+
+func (l *Logger) append(buf []byte, text string, col *color.Color) []byte {
+	if l.out.c {
+		buf = append(buf, col.Sprint(text)...)
+	} else {
+		buf = append(buf, text...)
+	}
+	return append(buf, ' ')
 }
 
 // Info ...

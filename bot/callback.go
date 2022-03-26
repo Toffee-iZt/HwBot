@@ -27,14 +27,13 @@ func (b *Bot) onCallback(callback *longpoll.MessageEvent) {
 				peer: callback.PeerID,
 				api:  b.vk,
 			},
-			bot: b,
 			mod: mod,
 		},
 		eventID: callback.EventID,
 		userID:  callback.UserID,
+		msgID:   callback.ConversationMessageID,
 	}
-	mod.Callback(ectx, callback.UserID, callback.ConversationMessageID, data)
-
+	mod.Callback(ectx, data)
 }
 
 func wrapPayload(mod *Module, payload interface{}) vkapi.JSONData {

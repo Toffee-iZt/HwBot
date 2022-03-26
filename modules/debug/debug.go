@@ -5,40 +5,30 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
-	"time"
 
 	"github.com/Toffee-iZt/HwBot/bot"
 	"github.com/Toffee-iZt/HwBot/common/format"
 	"github.com/Toffee-iZt/HwBot/common/rt"
-	"github.com/Toffee-iZt/HwBot/logger"
+	"github.com/Toffee-iZt/HwBot/vkapi"
 )
 
 // Module ...
 var Module = bot.Module{
-	Name: "debug",
-	Init: func(l *logger.Logger) bool {
-		log = l
-		log.Info("log test")
-		return true
-	},
-	Terminate: nil,
+	Name:     "debug",
+	Callback: onCallback,
 	Commands: []*bot.Command{
 		&debug,
 		&testembed,
-		&vkslow,
-		//&keyboard,
+		&keyboard,
 	},
 }
-
-var log *logger.Logger
 
 var debug = bot.Command{
 	Cmd:         []string{"debug"},
 	Description: "debug",
 	Help:        "/debug [gc] - информация об используемой памяти (аргумент gc запустит полную сборку мусора)",
-	InChat:      true,
-	InPrivate:   true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options:     bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var gc bool
 		if len(a) > 0 {
 			switch a[0] {
@@ -83,9 +73,8 @@ var testembed = bot.Command{
 	Cmd:         []string{"embed"},
 	Description: "Test embed",
 	Help:        "",
-	InChat:      true,
-	InPrivate:   true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
+	Options:     bot.OptionInChat | bot.OptionInDialog,
+	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		f, err := resFs.Open("resources/gopher.png")
 		if err != nil {
 			ctx.ReplyText(err.Error())
@@ -99,34 +88,11 @@ var testembed = bot.Command{
 	},
 }
 
-var vkslow = bot.Command{
-	Cmd:         []string{"vkslow"},
-	Description: "",
-	Help:        "",
-	InChat:      true,
-	InPrivate:   true,
-	Run: func(ctx *bot.MessageContext, msg *bot.NewMessage, a []string) {
-		n := time.Now().Unix()
-		p := n - msg.Message.Date
-		if p <= 2 {
-			ctx.ReplyText("Ok. Vk time <2s")
-			return
-		}
-		s := fmt.Sprintf(`Vk is slow.
-		Time - %d
-		Event time - %d
-		Receive time - %d`, p, msg.Message.Date, n)
-		ctx.ReplyText(s)
-	},
-}
-
-/*
 var keyboard = bot.Command{
-	Cmd:  []string{"kb"},
+	Cmd:         []string{"kb"},
 	Description: "test keyboard",
-	Help: "",
-	InChat: true,
-	InPrivate: true,
+	Help:        "",
+	Options:     bot.OptionInChat | bot.OptionInDialog,
 	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
 		var inline, onetime bool
 		if len(a) > 0 {
@@ -136,33 +102,35 @@ var keyboard = bot.Command{
 			onetime = a[1] == "onetime"
 		}
 
-		kb := vkapi.NewKeyboard(onetime, inline)
-		kb.AddRow()
-		kb.AddLocation(`{"tap": "location"}`)
-		kb.AddRow()
-		kb.AddText(`{"tap": "text"}`, "LABEL", vkapi.KeyboardColorPositive)
-		kb.AddCallback(`{"tap": "cb"}`, "CB", vkapi.KeyboardColorPrimary)
+		kb := ctx.KeyboardGenerator(onetime, inline)
+		kb.NextRow()
+		kb.AddText("LABEL", vkapi.KeyboardColorPositive, `{"tap": "text"}`)
+		kb.AddCallback("CB", vkapi.KeyboardColorPrimary, `{"tap": "cb"}`)
 
-		b.NewCallback(`{"tap": "cb"}`, func(c *bot.CallbackMessage) {
-			b.API().Messages.SendMessageEventAnswer(
-				c.EventID,
-				c.UserID,
-				c.PeerID,
-				&vkapi.EventData{
-					Type: vkapi.EventDataTypeShowSnackbar,
-					Text: "cool",
-				})
-			log.Info("callback tapped")
-		})
-
-		_, err := b.API().Messages.Send(vkapi.OutMessage{
-			PeerID:   m.Message.PeerID,
-			Message:  "testing keyborad",
+		ctx.Reply(bot.Message{
+			Text:     "testing keyborad",
 			Keyboard: kb,
 		})
-		if err != nil {
-			log.Error(err.Error())
-		}
 	},
 }
-*/
+
+func onCallback(ctx *bot.CallbackContext, payload vkapi.JSONData) {
+	var a struct {
+		Tap string `json:"tap"`
+	}
+
+	err := json.Unmarshal([]byte(payload), &a)
+	if err != nil {
+		ctx.Log().Error("callback json ivalid")
+		ctx.ReplyCallback(nil)
+	}
+
+	if a.Tap == "" {
+		ctx.ReplyCallback(nil)
+	}
+
+	ctx.ReplyCallback(&vkapi.EventData{
+		Type: vkapi.EventDataTypeShowSnackbar,
+		Text: "cool",
+	})
+}
