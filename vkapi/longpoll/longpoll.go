@@ -2,95 +2,73 @@ package longpoll
 
 import (
 	"context"
-	"strconv"
+	"net/http"
 
-	"github.com/Toffee-iZt/HwBot/common"
 	"github.com/Toffee-iZt/HwBot/vkapi"
+	"github.com/Toffee-iZt/HwBot/vkapi/vkargs"
 )
 
-// New creates new longpoll instance.
-func New(vk *vkapi.Client) *LongPoll {
-	return &LongPoll{
-		vk: vk,
-	}
-}
-
-// LongPoll struct.
-type LongPoll struct {
-	vk   *vkapi.Client
-	sync common.Sync
-}
-
-// Done returns a channel that closes when the longpoll is finished
-// due to an error or context cancellation.
-func (lp *LongPoll) Done() <-chan struct{} {
-	return lp.sync.Done()
-}
-
-// Err returns longpoll error.
-func (lp *LongPoll) Err() error {
-	return lp.sync.Err()
-}
-
-// Run runs longpoll in new goroutine.
-func (lp *LongPoll) Run(ctx context.Context, wait int) <-chan Event {
-	if !lp.sync.Init() {
-		return nil
-	}
-
-	ch := make(chan Event)
-	go lp.run(ctx, ch, wait)
-
+// Run runs longpoll listener and returns events channel.
+// Channel will be closed when context is done.
+func Run(ctx context.Context, vk *vkapi.Client, wait int) <-chan *Event {
+	ch := make(chan *Event)
+	go run(ctx, vk, wait, ch)
 	return ch
 }
 
-func (lp *LongPoll) update() *vkapi.LongPollServer {
-	s, err := lp.vk.GetLongPollServer(lp.vk.Self().ID)
-	if err != nil {
-		panic("longpoll update error\n" + err.Error())
-	}
-	return s
+type response struct {
+	Updates []Event `json:"updates"`
+	Ts      string  `json:"ts"`
+	Failed  int     `json:"failed"`
 }
 
-func (lp *LongPoll) run(ctx context.Context, ch chan Event, wait int) {
-	serv := lp.update()
+func run(ctx context.Context, vk *vkapi.Client, wait int, ch chan<- *Event) {
+	defer close(ch)
+
 	args := vkapi.ArgsMap{
 		"act":  "a_check",
-		"wait": strconv.Itoa(wait),
-		"key":  serv.Key,
-		"ts":   serv.Ts,
+		"wait": wait,
 	}
+	server := update(vk, args, true)
 
 	for {
-		var res struct {
-			Ts      string  `json:"ts"`
-			Updates []Event `json:"updates"`
-			Failed  int     `json:"failed"`
-		}
-		ctxerr := lp.vk.GET(ctx, serv.Server, args, &res)
-		if ctxerr != nil {
-			lp.sync.ErrClose(ctxerr)
+		var res response
+		url := server + "?" + vkargs.Marshal(args).Encode()
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		status, canceled := vk.Do(req, &res)
+		if canceled {
 			return
+		}
+
+		if status != 200 {
+			// TODO
 		}
 
 		switch res.Failed {
 		default:
 			args["ts"] = res.Ts
 		case 2, 3:
-			serv = lp.update()
-			args["key"] = serv.Key
-			if res.Failed == 3 {
-				args["ts"] = serv.Ts
-			}
+			update(vk, args, res.Failed == 3)
 		}
 
-		for _, u := range res.Updates {
+		for i := range res.Updates {
 			select {
-			case ch <- u:
+			case ch <- &res.Updates[i]:
 			case <-ctx.Done():
-				lp.sync.ErrClose(ctx.Err())
 				return
 			}
 		}
 	}
+}
+
+func update(vk *vkapi.Client, args vkapi.ArgsMap, ts bool) string {
+	s, err := vk.GetLongPollServer(vk.Self().ID)
+	if err != nil {
+		panic("longpoll update error\n" + err.String())
+	}
+	args["key"] = s.Key
+	if ts {
+		args["ts"] = s.Ts
+	}
+	return s.Server
 }

@@ -46,35 +46,17 @@ const (
 
 // MessageNew struct.
 type MessageNew struct {
-	Message    Message    `json:"message"`
-	ClientInfo ClientInfo `json:"client_info"`
+	Message    vkapi.Message `json:"message"`
+	ClientInfo ClientInfo    `json:"client_info"`
 }
 
 // MessageEvent struct.
 type MessageEvent struct {
-	Payload vkapi.JSONData `json:"payload"`
-	EventID string         `json:"event_id"`
-	UserID  vkapi.UserID   `json:"user_id"`
-	PeerID  vkapi.ID       `json:"peer_id"`
-
-	ConversationMessageID int `json:"conversation_message_id"`
-}
-
-// Message struct.
-type Message struct {
-	Date          int64              `json:"date"`
-	FromID        vkapi.ID           `json:"from_id"`
-	PeerID        vkapi.ID           `json:"peer_id"`
-	Text          string             `json:"text"`
-	Attachments   []vkapi.Attachment `json:"attachments"`
-	Forward       []shortMsg         `json:"fwd_messages"`
-	Reply         *shortMsg          `json:"reply_message"`
-	Payload       vkapi.JSONData     `json:"payload"`
-	ConvMessageID int                `json:"conversation_message_id"`
-	Action        *struct {
-		Type     string `json:"type"`
-		MemberID int    `json:"member_id"`
-	} `json:"action"`
+	Payload               vkapi.JSONData `json:"payload"`
+	EventID               string         `json:"event_id"`
+	UserID                vkapi.UserID   `json:"user_id"`
+	PeerID                vkapi.ID       `json:"peer_id"`
+	ConversationMessageID int            `json:"conversation_message_id"`
 }
 
 // ClientInfo struct.
@@ -92,13 +74,3 @@ const (
 	ActionTypeInviteUser = "chat_invite_user"
 	ActionTypeByLink     = "chat_invite_user_by_link"
 )
-
-type shortMsg struct {
-	ID            int                `json:"id"`
-	Date          int64              `json:"date"`
-	FromID        vkapi.ID           `json:"from_id"`
-	PeerID        vkapi.ID           `json:"peer_id"`
-	Text          string             `json:"text"`
-	Attachments   []vkapi.Attachment `json:"attachments"`
-	ConvMessageID int                `json:"conversation_message_id"`
-}

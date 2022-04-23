@@ -3,12 +3,12 @@ package vkapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"sync"
+	"net/http"
+	"net/url"
 
 	"github.com/Toffee-iZt/HwBot/vkapi/vkargs"
-	"github.com/valyala/bytebufferpool"
-	"github.com/valyala/fasthttp"
 )
 
 // Version is a vk api version.
@@ -21,7 +21,6 @@ func Auth(accessToken string) (*Client, *Error) {
 	}
 
 	c := Client{
-		http:  &fasthttp.Client{},
 		token: accessToken,
 		rndID: -(1 << 31),
 	}
@@ -37,8 +36,7 @@ func Auth(accessToken string) (*Client, *Error) {
 
 // Client struct.
 type Client struct {
-	http       *fasthttp.Client
-	bufferPool bytebufferpool.Pool
+	http http.Client
 
 	token string
 	self  *Group
@@ -50,79 +48,28 @@ func (c *Client) Self() Group {
 	return *c.self
 }
 
-func (c *Client) do(req *fasthttp.Request, obj interface{}) {
-	defer fasthttp.ReleaseRequest(req)
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(resp)
-	err := c.http.Do(req, resp)
-	if err != nil {
-		panic(fmt.Sprintf("vk request %s\n%s\n%s", err.Error(), string(req.RequestURI()), string(req.Body())))
-	}
-	body := resp.SwapBody(nil)
-	if status := resp.StatusCode(); status != fasthttp.StatusOK {
-		panic(fmt.Sprintf("vk http status %d\n%s", status, string(body)))
-	}
-	err = json.Unmarshal(body, obj)
-	if err != nil {
-		panic(fmt.Sprintf("vk invalid body json format(%s)", err.Error()))
-	}
+// HTTP sends http request.
+func (c *Client) HTTP(req *http.Request) (*http.Response, error) {
+	return c.http.Do(req)
 }
 
-func (c *Client) doContext(ctx context.Context, req *fasthttp.Request, obj interface{}) error {
-	reqCopy := fasthttp.AcquireRequest()
-	req.Header.CopyTo(&reqCopy.Header)
-	req.PostArgs().CopyTo(reqCopy.PostArgs())
-	reqCopy.SwapBody(req.SwapBody(nil))
-
-	ch := make(chan struct{})
-	mu := sync.Mutex{}
-
-	go func() {
-		c.do(reqCopy, obj)
-		mu.Lock()
-		select {
-		case <-ch: // closed when ctx is done
-		default:
-			req.SwapBody(reqCopy.SwapBody(nil))
-			ch <- struct{}{}
+// Do sends http request and parses body as JSON.
+func (c *Client) Do(req *http.Request, obj interface{}) (status int, canceled bool) {
+	resp, err := c.http.Do(req)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return 0, true
 		}
-		mu.Unlock()
-	}()
+		panic(fmt.Sprintf("vk request %s\n%s", err.Error(), string(req.URL.String())))
+	}
+	defer resp.Body.Close()
 
-	select {
-	case <-ch:
-		return nil
-	case <-ctx.Done():
-		mu.Lock()
-		close(ch)
-		mu.Unlock()
+	err = json.NewDecoder(resp.Body).Decode(obj)
+	if err != nil {
+		panic(fmt.Sprintf("vk invalid body format(%s)", err.Error()))
 	}
 
-	return ctx.Err()
-}
-
-func (c *Client) buildRequest(url string, q *vkargs.Query) *fasthttp.Request {
-	uribuf := c.bufferPool.Get()
-	uribuf.WriteString(url)
-
-	if q != nil {
-		uribuf.WriteByte('?')
-		uribuf.B = q.AppendBytes(uribuf.B)
-		vkargs.ReleaseQuery(q)
-	}
-
-	req := fasthttp.AcquireRequest()
-	req.Header.SetRequestURIBytes(uribuf.Bytes())
-
-	c.bufferPool.Put(uribuf)
-	return req
-}
-
-// GET ...
-func (c *Client) GET(ctx context.Context, endpoint string, args Args, res interface{}) error {
-	req := c.buildRequest(endpoint, vkargs.Marshal(args))
-	req.Header.SetMethod(fasthttp.MethodGet)
-	return c.doContext(ctx, req, res)
+	return resp.StatusCode, false
 }
 
 func (c *Client) method(obj interface{}, method string, args Args) *Error {
@@ -132,8 +79,8 @@ func (c *Client) method(obj interface{}, method string, args Args) *Error {
 	q.Set("access_token", c.token)
 	q.Set("v", Version)
 
-	req := c.buildRequest(VkAPI+method, q)
-	req.Header.SetMethod(fasthttp.MethodPost)
+	uri := VkAPI + method + "?" + q.Encode()
+	req, _ := http.NewRequest(http.MethodPost, uri, nil)
 
 	var res struct {
 		Error *struct {
@@ -143,12 +90,13 @@ func (c *Client) method(obj interface{}, method string, args Args) *Error {
 		Response json.RawMessage `json:"response"`
 	}
 
-	c.do(req, &res)
+	c.Do(req, &res)
 
 	if res.Error != nil {
+		q.Del("access_token")
 		return &Error{
 			Method:  method,
-			Args:    vkargs.ToMap(args),
+			Args:    q,
 			Code:    res.Error.Code,
 			Message: res.Error.Message,
 		}
@@ -167,13 +115,13 @@ func (c *Client) method(obj interface{}, method string, args Args) *Error {
 // Error struct.
 type Error struct {
 	Method  string
-	Args    map[string]string
+	Args    url.Values
 	Code    int
 	Message string
 }
 
-func (e *Error) Error() string {
-	return fmt.Sprintf("vk.%s(%s) error %d %s", e.Method, e.Args, e.Code, e.Message)
+func (e *Error) String() string {
+	return fmt.Sprintf("vk.%s(%s)\nerror %d %s", e.Method, e.Args, e.Code, e.Message)
 }
 
 // Args for vk.

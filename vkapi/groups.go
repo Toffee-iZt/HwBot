@@ -6,7 +6,7 @@ type Group struct {
 	ScreenName  string  `json:"screen_name"`
 	Type        string  `json:"type"`
 	ID          GroupID `json:"id"`
-	IsClosed    BoolInt `json:"is_closed"`
+	IsClosed    boolean `json:"is_closed"`
 	Deactivated string  `json:"deactivated"`
 	Photo50     string  `json:"photo_50"`
 	Photo100    string  `json:"photo_100"`

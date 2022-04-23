@@ -8,20 +8,13 @@ const (
 	AttachmentTypeAudioMessage = "audio_message"
 )
 
-// Attachment struct.
-type Attachment struct {
-	Photo        *Photo
-	AudioMessage *AudioMessage
-	Type         string
-}
-
-type attachment struct {
+type uploaded struct {
 	AccessKey string `json:"access_key"`
 	ID        int    `json:"id"`
 	OwnerID   ID     `json:"owner_id"`
 }
 
-func (a *attachment) string(typ string) string {
+func (a *uploaded) string(typ string) string {
 	s := string(typ) + strconv.Itoa(int(a.OwnerID)) + "_" + strconv.Itoa(a.ID)
 	if a.AccessKey != "" {
 		s += "_" + a.AccessKey
@@ -31,7 +24,7 @@ func (a *attachment) string(typ string) string {
 
 // Photo struct.
 type Photo struct {
-	attachment
+	uploaded
 
 	AlbumID int    `json:"album_id"`
 	UserID  UserID `json:"user_id"`
@@ -53,7 +46,7 @@ func (p *Photo) String() string {
 
 // AudioMessage struct.
 type AudioMessage struct {
-	attachment
+	uploaded
 
 	Duration int    `json:"duration"`
 	LinkOGG  string `json:"link_ogg"`

@@ -66,46 +66,24 @@ func (j *JSONData) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// NewJSONData creates new JSONData from string.
-func NewJSONData(s string) (JSONData, bool) {
-	ok := json.Valid(strbytes.S2b(s))
-	if !ok {
-		return "{}", false
-	}
-	return JSONData(s), true
+// Unmarshal data.
+func (j *JSONData) Unmarshal(dst interface{}) error {
+	return json.Unmarshal(strbytes.S2b(string(*j)), dst)
 }
 
-// NewJSONDataBytes creates new JSONData from bytes slice.
-func NewJSONDataBytes(b []byte) (JSONData, bool) {
-	ok := json.Valid(b)
-	if !ok {
-		return "{}", false
-	}
-	return JSONData(strbytes.B2s(b)), true
-}
-
-// NewJSONDataMarshal creates new JSONData from object.
-func NewJSONDataMarshal(v interface{}) (JSONData, bool) {
+// NewJSONData creates new JSONData from object.
+func NewJSONData(v interface{}) (JSONData, bool) {
 	d, err := json.Marshal(v)
-	if err != nil {
+	if err != nil || d[0] != '{' {
 		return "{}", false
 	}
 	return JSONData(strbytes.B2s(d)), true
 }
 
-// BoolInt is bool as 0 or 1.
-type BoolInt bool
-
-// MarshalJSON implements json.Marshaler.
-func (b BoolInt) MarshalJSON() ([]byte, error) {
-	if b {
-		return []byte{'1'}, nil
-	}
-	return []byte{'0'}, nil
-}
+type boolean bool
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (b *BoolInt) UnmarshalJSON(data []byte) error {
+func (b *boolean) UnmarshalJSON(data []byte) error {
 	*b = string(data) != "0"
 	return nil
 }

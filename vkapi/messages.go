@@ -9,30 +9,30 @@ import (
 type OutMessage struct {
 	randomID int32 `vkargs:"random_id"`
 
-	UserID  UserID   `vkargs:"user_id,omitempty"`
-	UserIDs []UserID `vkargs:"user_ids,omitempty"`
-	PeerID  ID       `vkargs:"peer_id,omitempty"`
-	PeerIDs []ID     `vkargs:"peer_ids,omitempty"`
-	Domain  string   `vkargs:"domain,omitempty"`
-	ChatID  ChatID   `vkargs:"chat_id,omitempty"`
+	UserID  UserID   `vkargs:"user_id"`
+	UserIDs []UserID `vkargs:"user_ids"`
+	PeerID  ID       `vkargs:"peer_id"`
+	PeerIDs []ID     `vkargs:"peer_ids"`
+	Domain  string   `vkargs:"domain"`
+	ChatID  ChatID   `vkargs:"chat_id"`
 
-	OutMessageContent `vkargs:"embed"`
+	OutMessageContent
 }
 
 // OutMessageContent struct.
 type OutMessageContent struct {
-	Message    string   `vkargs:"message,omitempty"`
-	Lat        float64  `vkargs:"lat,omitempty"`
-	Long       float64  `vkargs:"long,omitempty"`
-	Attachment []string `vkargs:"attachment,omitempty"`
-	StickerID  int      `vkargs:"sticker_id,omitempty"`
-	Keyboard   JSONData `vkargs:"keyboard,omitempty"`
+	Message    string   `vkargs:"message"`
+	Lat        float64  `vkargs:"lat"`
+	Long       float64  `vkargs:"long"`
+	Attachment []string `vkargs:"attachment"`
+	StickerID  int      `vkargs:"sticker_id"`
+	Keyboard   JSONData `vkargs:"keyboard"`
 
-	ReplyTo         int   `vkargs:"reply_to,omitempty"`
-	ForwardMessages []int `vkargs:"forward_messages,omitempty"`
+	ReplyTo         int   `vkargs:"reply_to"`
+	ForwardMessages []int `vkargs:"forward_messages"`
 
-	DontParseLinks  bool `vkargs:"dont_parse_links,omitempty"`
-	DisableMentions bool `vkargs:"disable_mentions,omitempty"`
+	DontParseLinks  bool `vkargs:"dont_parse_links"`
+	DisableMentions bool `vkargs:"disable_mentions"`
 }
 
 // SendMessage sends a message.
@@ -47,14 +47,14 @@ func (c *Client) EditMessage(peerID ID, convMessageID int, content OutMessageCon
 		PeerID                ID  `vkargs:"peer_id"`
 		ConversationMessageID int `vkargs:"conversation_message_id"`
 
-		OutMessageContent `vkargs:"embed"`
+		OutMessageContent
 	}{
 		PeerID:                peerID,
 		ConversationMessageID: convMessageID,
 		OutMessageContent:     content,
 	}
 
-	var ok BoolInt
+	var ok boolean
 	return bool(ok), c.method(&ok, "messages.edit", edit)
 }
 
@@ -130,4 +130,37 @@ func (c *Client) RemoveChatUser(chatID ChatID, memberID ID) *Error {
 		"chat_id":   chatID,
 		"member_id": memberID,
 	})
+}
+
+// Message struct.
+type Message struct {
+	Date          int64        `json:"date"`
+	FromID        ID           `json:"from_id"`
+	PeerID        ID           `json:"peer_id"`
+	Text          string       `json:"text"`
+	Attachments   []attachment `json:"attachments"`
+	Forward       []shortMsg   `json:"fwd_messages"`
+	Reply         *shortMsg    `json:"reply_message"`
+	Payload       JSONData     `json:"payload"`
+	ConvMessageID int          `json:"conversation_message_id"`
+	Action        *struct {
+		Type     string `json:"type"`
+		MemberID int    `json:"member_id"`
+	} `json:"action"`
+}
+
+type shortMsg struct {
+	ID            int          `json:"id"`
+	Date          int64        `json:"date"`
+	FromID        ID           `json:"from_id"`
+	PeerID        ID           `json:"peer_id"`
+	Text          string       `json:"text"`
+	Attachments   []attachment `json:"attachments"`
+	ConvMessageID int          `json:"conversation_message_id"`
+}
+
+type attachment struct {
+	Photo        *Photo        `json:"photo"`
+	AudioMessage *AudioMessage `json:"audio_message"`
+	Type         string        `json:"type"`
 }
