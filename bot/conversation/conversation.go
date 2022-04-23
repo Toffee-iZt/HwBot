@@ -1,4 +1,4 @@
-package bot
+package conversation
 
 import (
 	"bytes"
@@ -6,50 +6,63 @@ import (
 	"io/fs"
 
 	"github.com/Toffee-iZt/HwBot/vkapi"
+	"github.com/Toffee-iZt/HwBot/vkapi/keyboard"
+	"github.com/Toffee-iZt/HwBot/vkapi/upload"
 )
 
 // Message struct.
 type Message struct {
-	Text        string
-	Lat, Long   float64
-	Attachments []*Attachment
-	Keyboard    *Keyboard
-	ReplyTo     int
-	Forward     []int
-	Mentions    bool
+	Text     string
+	Photos   []*Photo
+	Keyboard *keyboard.Keyboard
+	ReplyTo  int
+	Forward  []int
+	Mentions bool
 }
 
-// NewAttachment makes new attachment.
-func NewAttachment(name string, reader io.Reader) *Attachment {
-	if reader == nil {
+// Photo type
+type Photo struct {
+	fname string
+	data  io.Reader
+}
+
+// NewPhoto creates photo object.
+func NewPhoto(fname string, data io.Reader) *Photo {
+	if data == nil {
 		return nil
 	}
-	return &Attachment{
-		name:   name,
-		reader: reader,
+	return &Photo{
+		fname: fname,
+		data:  data,
 	}
 }
 
-// NewAttachmentFile makes new attachment from file.
-func NewAttachmentFile(file fs.File) (*Attachment, error) {
-	stat, err := file.Stat()
+// NewPhotoFile creates photo object from file.
+func NewPhotoFile(file fs.File) (*Photo, error) {
+	if file == nil {
+		return nil, nil
+	}
+	fi, err := file.Stat()
+	if err != nil || fi.Size() == 0 {
+		return nil, err
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, fi.Size()))
+	_, err = buf.ReadFrom(file)
 	if err != nil {
 		return nil, err
 	}
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-	return &Attachment{
-		name:   stat.Name(),
-		reader: bytes.NewReader(data),
+	return &Photo{
+		fname: fi.Name(),
+		data:  buf,
 	}, nil
 }
 
-// Attachment struct.
-type Attachment struct {
-	name   string
-	reader io.Reader
+// New creates new chat object.
+func New(peer vkapi.ID, api *vkapi.Client) *Conversation {
+	return &Conversation{
+		peer: peer,
+		api:  api,
+	}
 }
 
 // Conversation struct.
@@ -58,33 +71,28 @@ type Conversation struct {
 	api  *vkapi.Client
 }
 
-// GetMembers returns a list of conversation users.
+// GetMembers returns a list of chat users.
 func (c *Conversation) GetMembers() (*vkapi.Members, *vkapi.Error) {
 	return c.api.GetConversationMembers(c.peer)
 }
 
 func (c *Conversation) prepareMessage(msg Message) (vkapi.OutMessageContent, *vkapi.Error) {
-	var atts []string
-	if len(msg.Attachments) > 0 {
-		atts = make([]string, len(msg.Attachments))
-		for i, a := range msg.Attachments {
-			attstr, vkerr := c.api.UploadMessagesPhoto(c.peer, a.name, a.reader)
-			if vkerr != nil {
-				return vkapi.OutMessageContent{}, vkerr
-			}
-			atts[i] = attstr
+	atts := make([]string, len(msg.Photos))
+	for i, a := range msg.Photos {
+		vkstr, vkerr := upload.MessagesPhoto(c.api, c.peer, a.fname, a.data)
+		if vkerr != nil {
+			return vkapi.OutMessageContent{}, vkerr
 		}
+		atts[i] = vkstr
 	}
 
 	var kb vkapi.JSONData
 	if msg.Keyboard != nil {
-		kb = msg.Keyboard.Build()
+		kb = msg.Keyboard.Data()
 	}
 
 	return vkapi.OutMessageContent{
 		Message:         msg.Text,
-		Lat:             msg.Lat,
-		Long:            msg.Long,
 		Attachment:      atts,
 		Keyboard:        kb,
 		ReplyTo:         msg.ReplyTo,

@@ -1,104 +1,146 @@
 package bot
 
 import (
-	"fmt"
 	"runtime"
 
+	"github.com/Toffee-iZt/HwBot/bot/conversation"
 	"github.com/Toffee-iZt/HwBot/common/rt"
 	"github.com/Toffee-iZt/HwBot/logger"
 	"github.com/Toffee-iZt/HwBot/vkapi"
+	"github.com/Toffee-iZt/HwBot/vkapi/longpoll"
 )
 
 type eventctx struct {
-	Conv *Conversation
-	mod  *Module
+	con *conversation.Conversation
+	mod *Module
+	api *vkapi.Client
 }
 
-func (c *eventctx) close() {
-	c.Conv = nil
-	c.mod = nil
-	runtime.Goexit()
-}
-
-func (c *eventctx) errlog(f string, vkerr *vkapi.Error, a ...interface{}) {
+func (c *eventctx) errlog(vkerr *vkapi.Error) {
 	if vkerr != nil {
-		c.mod.log.Error(f, vkerr.Error(), fmt.Sprint(a...))
+		c.mod.log.Error("context error: %d %s\n%s %s\n%s",
+			vkerr.Code,
+			vkerr.Message,
+			vkerr.Method,
+			vkerr.Args,
+			rt.Caller(1).Function,
+		)
 	}
 }
 
-// Log returns module logger.
+// Close closes current context.
+func (c *eventctx) Close() {
+	runtime.Goexit()
+}
+
+// Log returns logger for module.
 func (c *eventctx) Log() *logger.Logger {
 	return c.mod.log
 }
 
 // API returns vk client.
 func (c *eventctx) API() *vkapi.Client {
-	return c.Conv.api
+	return c.api
 }
 
-// KeyboardGenerator returns empty keyboard generator.
-func (c *eventctx) KeyboardGenerator(oneTime bool, inline bool) *Keyboard {
-	kb := vkapi.NewKeyboard(oneTime, inline)
-	return &Keyboard{
-		mod: c.mod,
-		kb:  kb,
+// Conversation returns chat object for current chat.
+func (c *eventctx) Conversation() *conversation.Conversation {
+	return c.con
+}
+
+// Payload wraps payload.
+func (c *eventctx) Payload(i interface{}) vkapi.JSONData {
+	return wrap(c.mod, i)
+}
+
+func newContext(api *vkapi.Client, mod *Module, peer vkapi.ID) *Context {
+	return &Context{
+		eventctx: eventctx{
+			mod: mod,
+			api: api,
+			con: conversation.New(peer, api),
+		},
 	}
 }
 
-// Reply replies with a message and closes context.
-func (c *eventctx) Reply(msg Message) {
-	vkerr := c.Conv.SendMessage(msg)
-	c.errlog("context reply error: %s %s", vkerr, rt.Caller().Function)
-	c.close()
-}
-
-// ReplyMessage replies with a text and closes context.
-func (c *eventctx) ReplyMessage(text string, attachments ...*Attachment) {
-	vkerr := c.Conv.SendMessage(Message{
-		Text:        text,
-		Attachments: attachments,
-	})
-	c.errlog("context reply error: %s %s", vkerr, rt.Caller().Function)
-	c.close()
-}
-
-// Context struct.
+// Context type.
 type Context struct {
 	eventctx
 }
 
+// Reply replies with a message and closes context.
+func (c *Context) Reply(msg conversation.Message) {
+	vkerr := c.con.SendMessage(msg)
+	c.errlog(vkerr)
+	c.Close()
+}
+
 // ReplyText replies to a message with a text and closes context.
 func (c *Context) ReplyText(text string) {
-	c.ReplyMessage(text)
+	c.Reply(conversation.Message{Text: text})
 }
 
-// ReplyError send error as vk message and closes context.
-func (c *Context) ReplyError(f string, a ...interface{}) {
-	c.ReplyText(fmt.Sprintf(f, a...))
+func newCallback(api *vkapi.Client, mod *Module, event *longpoll.MessageEvent) *Callback {
+	return &Callback{
+		eventctx: eventctx{
+			mod: mod,
+			api: api,
+			con: conversation.New(event.PeerID, api),
+		},
+		event: event,
+	}
 }
 
-// CallbackContext struct.
-type CallbackContext struct {
+// Callback type.
+type Callback struct {
 	eventctx
-
-	eventID string
-	userID  vkapi.UserID
-	msgID   int
+	event *longpoll.MessageEvent
 }
 
-// ReplyCallback replies to a callback event and closes context.
-func (c *CallbackContext) ReplyCallback(data *vkapi.EventData) {
-	vkerr := c.Conv.api.SendMessageEventAnswer(c.eventID, c.userID, c.Conv.peer, data)
-	c.errlog("callback context reply error: %s %s", vkerr, rt.Caller().Function)
-	c.close()
+// Close replies without action to a callback event and closes context.
+func (c *Callback) Close() {
+	c.reply(nil)
+}
+
+// Edit edits a message with keyboard and closes context.
+func (c *Callback) Edit(msg conversation.Message) {
+	if c.event.ConversationMessageID == 0 {
+		c.mod.log.Warn("callback context edit message: keyboard is not inlined")
+		c.Close()
+	}
+	_, vkerr := c.con.EditMessage(c.event.ConversationMessageID, msg)
+	c.errlog(vkerr)
+	c.Close()
+}
+
+// ShowSnackbar replies to a callback event and closes context.
+func (c *Callback) ShowSnackbar(text string) {
+	c.reply(&vkapi.EventData{
+		Type: vkapi.EventDataTypeShowSnackbar,
+		Text: text,
+	})
+}
+
+// OpenLink replies to a callback event and closes context.
+func (c *Callback) OpenLink(link string) {
+	c.reply(&vkapi.EventData{
+		Type: vkapi.EventDataTypeOpenLink,
+		Link: link,
+	})
+}
+
+func (c *Callback) reply(data *vkapi.EventData) {
+	vkerr := c.api.SendMessageEventAnswer(c.event.EventID, c.event.UserID, c.event.PeerID, data)
+	c.errlog(vkerr)
+	c.Close()
 }
 
 // MessageID returns message id.
-func (c *CallbackContext) MessageID() int {
-	return c.msgID
+func (c *Callback) MessageID() int {
+	return c.event.ConversationMessageID
 }
 
 // UserID returns user id.
-func (c *CallbackContext) UserID(data *vkapi.EventData) vkapi.UserID {
-	return c.userID
+func (c *Callback) UserID() vkapi.UserID {
+	return c.event.UserID
 }
