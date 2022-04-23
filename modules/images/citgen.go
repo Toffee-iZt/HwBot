@@ -2,6 +2,7 @@ package images
 
 import (
 	"bytes"
+	"context"
 	"image"
 	"image/color"
 	"image/png"
@@ -9,7 +10,9 @@ import (
 	"time"
 
 	"github.com/Toffee-iZt/HwBot/bot"
+	"github.com/Toffee-iZt/HwBot/bot/conversation"
 	"github.com/Toffee-iZt/HwBot/vkapi"
+	"github.com/Toffee-iZt/HwBot/vkapi/upload"
 	"github.com/fogleman/gg"
 	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/font"
@@ -23,7 +26,7 @@ var citgen = bot.Command{
 	Description: "Генерация цитаты",
 	Help:        "/citen и ответить или переслать сообщение",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.Context, msg *bot.Message) {
 		var fromID vkapi.ID
 		var text string
 		var t int64
@@ -42,16 +45,20 @@ var citgen = bot.Command{
 		if text == "" {
 			ctx.ReplyText("Сообщение не содержит текста")
 		}
-		if len(a) > 0 {
-			text = strings.Join(a, " ")
+		if len(msg.Args) > 0 {
+			text = strings.Join(msg.Args, " ")
 		}
 
 		api := ctx.API()
 		log := ctx.Log()
 
-		name, photo, err := getNamePhoto(api, fromID)
+		name, photo, vkerr, err := getNamePhoto(api, fromID)
 		if err != nil {
 			log.Error("citgen: %s", err.Error())
+			return
+		}
+		if vkerr != nil {
+			log.Error("citgen: %s", vkerr.String())
 			return
 		}
 
@@ -61,36 +68,38 @@ var citgen = bot.Command{
 			return
 		}
 
-		ctx.ReplyMessage("", bot.NewAttachment("citgen.png", data))
+		ctx.Reply(conversation.Message{
+			Photos: []*conversation.Photo{conversation.NewPhoto("citgen.png", data)},
+		})
 	},
 }
 
-func getNamePhoto(api *vkapi.Client, from vkapi.ID) (string, image.Image, error) {
+func getNamePhoto(api *vkapi.Client, from vkapi.ID) (string, image.Image, *vkapi.Error, error) {
 	var name string
 	var photo string
 	if gid := from.ToGroup(); gid != 0 {
 		g, err := api.GroupsGetByID(gid)
 		if err != nil || len(g) == 0 {
-			return "", nil, err
+			return "", nil, err, nil
 		}
 		name = g[0].Name
 		photo = g[0].Photo200
 	} else {
 		u, err := api.UsersGet([]vkapi.UserID{from.ToUser()}, "", "photo_200")
 		if err != nil || len(u) == 0 {
-			return "", nil, err
+			return "", nil, err, nil
 		}
 
 		name = u[0].FirstName + " " + u[0].LastName
 		photo = *u[0].Photo200
 	}
 
-	img, err := dl(photo)
+	img, err := upload.DownloadImage(context.Background(), api, photo)
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 
-	return name, img, nil
+	return name, img, nil, nil
 }
 
 const (

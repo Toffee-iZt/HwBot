@@ -41,7 +41,7 @@ func BackTrace(skip int) []*StackFrame {
 }
 
 // Caller ...
-func Caller() *StackFrame {
-	pc, _, _, _ := runtime.Caller(2)
+func Caller(skip int) *StackFrame {
+	pc, _, _, _ := runtime.Caller(2 + skip)
 	return frameForPC(pc)
 }

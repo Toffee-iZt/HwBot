@@ -17,9 +17,6 @@ var (
 
 // Setup setups std module.
 func Setup(b *bot.Bot) *bot.Module {
-	if b == nil {
-		panic("")
-	}
 	start = time.Now()
 	instance = b
 	return &module
@@ -39,12 +36,12 @@ var help = bot.Command{
 	Description: "Помощь по командам",
 	Help:        "",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.Context, msg *bot.Message) {
 		mods := instance.ModList()
-		if len(a) > 0 {
+		if len(msg.Args) > 0 {
 			for _, m := range mods {
 				for _, c := range m.Commands {
-					if strbytes.Has(c.Cmd, a[0]) {
+					if strbytes.Has(c.Cmd, msg.Args[0]) {
 						ctx.ReplyText(fmt.Sprintf("%s - %s\nAliases: %s\n\n%s", c.Cmd[0], c.Description, strings.Join(c.Cmd, ", "), c.Help))
 					}
 				}
@@ -57,7 +54,7 @@ var help = bot.Command{
 				if i > 0 {
 					str += "\n"
 				}
-				str += "-> " + c.Cmd[0] + " - " + c.Description
+				str += " -> " + c.Cmd[0] + " - " + c.Description
 			}
 		}
 		ctx.ReplyText(str)
@@ -69,7 +66,7 @@ var about = bot.Command{
 	Description: "Информация о боте",
 	Help:        "",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, _ []string) {
+	Run: func(ctx *bot.Context, msg *bot.Message) {
 		ctx.ReplyText(fmt.Sprintln(
 			"HwBot\nVersion: debug\nSource code: github.com/Toffee-iZt/HwBot\n",
 			"\nВерсия API VK:", vkapi.Version,
@@ -82,7 +79,7 @@ var stat = bot.Command{
 	Description: "Статистика",
 	Help:        "Проверка работоспособности бота и статистика работы",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, _ []string) {
+	Run: func(ctx *bot.Context, msg *bot.Message) {
 		p := time.Now().Unix() - msg.Message.Date
 		str := fmt.Sprintf(`Stats
 		

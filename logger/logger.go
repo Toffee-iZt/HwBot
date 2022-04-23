@@ -26,16 +26,6 @@ func (l *Logger) Child(name string) *Logger {
 	return New(l.out, l.name+"::"+name)
 }
 
-// Copy ...
-func (l *Logger) Copy(name string) *Logger {
-	return New(l.out, name)
-}
-
-// SetWriter ...
-func (l *Logger) SetWriter(w *Writer) {
-	l.out = w
-}
-
 func (l *Logger) log(pref string, pcol *color.Color, f string, v ...interface{}) {
 	if f == "" {
 		return
@@ -63,7 +53,8 @@ func (l *Logger) printTime(buf []byte, col bool) []byte {
 	t := time.Now()
 	if past := t.Sub(l.out.l); past > time.Minute {
 		l.out.l = t
-		return l.append(buf, t.Format("02.01.2006 15:04\n"), timecol)
+		buf = l.append(buf, t.Format("02.01.2006 15:04"), timecol)
+		return append(buf, '\n')
 	}
 	return buf
 }

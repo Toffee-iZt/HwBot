@@ -1,37 +1,15 @@
 package images
 
 import (
-	"bytes"
 	"image"
 
 	"github.com/Toffee-iZt/HwBot/bot"
 	"github.com/nfnt/resize"
-	"github.com/valyala/fasthttp"
 )
 
 var Module = bot.Module{
 	Name:     "images",
 	Commands: []*bot.Command{&citgen},
-}
-
-var dlClient fasthttp.Client
-
-func dl(url string) (image.Image, error) {
-	req := fasthttp.AcquireRequest()
-	req.SetRequestURI(url)
-	req.Header.SetMethod(fasthttp.MethodGet)
-
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseRequest(req)
-	defer fasthttp.ReleaseResponse(resp)
-
-	err := dlClient.Do(req, resp)
-	if err != nil {
-		return nil, err
-	}
-
-	photo, _, err := image.Decode(bytes.NewReader(resp.Body()))
-	return photo, err
 }
 
 func crop(img image.Image, rect image.Rectangle) image.Image {

@@ -7,9 +7,12 @@ import (
 	"runtime"
 
 	"github.com/Toffee-iZt/HwBot/bot"
+	"github.com/Toffee-iZt/HwBot/bot/conversation"
 	"github.com/Toffee-iZt/HwBot/common/format"
 	"github.com/Toffee-iZt/HwBot/common/rt"
+	"github.com/Toffee-iZt/HwBot/common/strbytes"
 	"github.com/Toffee-iZt/HwBot/vkapi"
+	"github.com/Toffee-iZt/HwBot/vkapi/keyboard"
 )
 
 // Module ...
@@ -18,8 +21,6 @@ var Module = bot.Module{
 	Callback: onCallback,
 	Commands: []*bot.Command{
 		&debug,
-		&testembed,
-		&keyboard,
 	},
 }
 
@@ -28,12 +29,16 @@ var debug = bot.Command{
 	Description: "debug",
 	Help:        "/debug [gc] - информация об используемой памяти (аргумент gc запустит полную сборку мусора)",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.Context, msg *bot.Message) {
 		var gc bool
-		if len(a) > 0 {
-			switch a[0] {
+		if len(msg.Args) > 0 {
+			switch msg.Args[0] {
 			case "obj":
 				ctx.ReplyText(marshalObj(msg))
+			case "embed":
+				testembed(ctx)
+			case "kb":
+				testkb(ctx, msg.Args[1:])
 			case "gc":
 				gc = true
 			}
@@ -69,68 +74,62 @@ func memStats(gc bool) string {
 //go:embed resources
 var resFs embed.FS
 
-var testembed = bot.Command{
-	Cmd:         []string{"embed"},
-	Description: "Test embed",
-	Help:        "",
-	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		f, err := resFs.Open("resources/gopher.png")
-		if err != nil {
-			ctx.ReplyText(err.Error())
-		}
-		att, err := bot.NewAttachmentFile(f)
-		f.Close()
-		if err != nil {
-			ctx.ReplyText(err.Error())
-		}
-		ctx.ReplyMessage("", att)
-	},
+func testembed(ctx *bot.Context) {
+	f, err := resFs.Open("resources/gopher.png")
+	if err != nil {
+		ctx.ReplyText(err.Error())
+	}
+
+	ph, err := conversation.NewPhotoFile(f)
+	if err != nil {
+		ctx.ReplyText(err.Error())
+	}
+	f.Close()
+	ctx.Reply(conversation.Message{
+		Photos: []*conversation.Photo{ph},
+	})
 }
 
-var keyboard = bot.Command{
-	Cmd:         []string{"kb"},
-	Description: "test keyboard",
-	Help:        "",
-	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		var inline, onetime bool
-		if len(a) > 0 {
-			inline = a[0] == "inline"
-		}
-		if len(a) > 1 {
-			onetime = a[1] == "onetime"
-		}
+func testkb(ctx *bot.Context, a []string) {
+	inline := strbytes.Has(a, "inline")
+	onetime := strbytes.Has(a, "onetime")
+	clear := strbytes.Has(a, "clear")
 
-		kb := ctx.KeyboardGenerator(onetime, inline)
-		kb.NextRow()
-		kb.AddText("LABEL", vkapi.KeyboardColorPositive, `{"tap": "text"}`)
-		kb.AddCallback("CB", vkapi.KeyboardColorPrimary, `{"tap": "cb"}`)
-
-		ctx.Reply(bot.Message{
-			Text:     "testing keyborad",
+	if clear {
+		kb := keyboard.Empty()
+		ctx.Reply(conversation.Message{
+			Text:     "keyboard cleared",
 			Keyboard: kb,
 		})
-	},
+	}
+
+	k := keyboard.New(onetime, inline)
+	k.NextRow()
+	k.AddText("LABEL", keyboard.ColorPositive, ctx.Payload("text"))
+	k.AddCallback("CB", keyboard.ColorPrimary, ctx.Payload("cb"))
+	k.AddCallback("Remove", keyboard.ColorNegative, ctx.Payload("edit"))
+
+	ctx.Reply(conversation.Message{
+		Text:     "testing keyborad",
+		Keyboard: k,
+	})
 }
 
-func onCallback(ctx *bot.CallbackContext, payload vkapi.JSONData) {
-	var a struct {
-		Tap string `json:"tap"`
-	}
-
-	err := json.Unmarshal([]byte(payload), &a)
+func onCallback(ctx *bot.Callback, payload vkapi.JSONData) {
+	var a string
+	err := payload.Unmarshal(&a)
 	if err != nil {
 		ctx.Log().Error("callback json ivalid")
-		ctx.ReplyCallback(nil)
+		ctx.Close()
 	}
 
-	if a.Tap == "" {
-		ctx.ReplyCallback(nil)
+	switch a {
+	case "cb":
+		ctx.ShowSnackbar("cool")
+	case "edit":
+		ctx.Edit(conversation.Message{
+			Text: "good",
+		})
 	}
-
-	ctx.ReplyCallback(&vkapi.EventData{
-		Type: vkapi.EventDataTypeShowSnackbar,
-		Text: "cool",
-	})
+	ctx.Close()
 }

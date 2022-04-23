@@ -34,13 +34,12 @@ func MessagesPhoto(c *vkapi.Client, peerID vkapi.ID, fname string, data io.Reade
 
 func upload(c *vkapi.Client, dst interface{}, uploadURL, field string, fname string, data io.Reader) {
 	var body bytes.Buffer
-	req, _ := http.NewRequest(http.MethodPost, uploadURL, &body)
-
 	writer := multipart.NewWriter(&body)
 	part, _ := writer.CreateFormFile(field, fname)
 	io.Copy(part, data)
 	writer.Close()
 
+	req, _ := http.NewRequest(http.MethodPost, uploadURL, &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	c.Do(req, dst)

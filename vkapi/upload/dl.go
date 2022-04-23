@@ -10,7 +10,7 @@ import (
 
 // DownloadImage downloads and encodes image.
 func DownloadImage(ctx context.Context, c *vkapi.Client, url string) (image.Image, error) {
-	req, err := http.NewRequestWithContext(ctx, url, http.MethodGet, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}

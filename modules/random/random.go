@@ -29,17 +29,17 @@ var list = bot.Command{
 		"\nПосле команды можно указать длину списка" +
 		"\nНапример /список 12 задротов - список из 12 участников",
 	Options: bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		members, err := ctx.Conv.GetMembers()
+	Run: func(ctx *bot.Context, msg *bot.Message) {
+		members, err := ctx.Conversation().GetMembers()
 		if err != nil {
-			ctx.ReplyError("У бота недостаточно прав доступа для выполнения команды")
+			ctx.ReplyText("У бота недостаточно прав доступа для выполнения команды")
 		}
 
 		l := len(members.Profiles)
 
 		var num = 5
-		if len(a) > 0 {
-			n, _ := strconv.Atoi(a[0])
+		if len(msg.Args) > 0 {
+			n, _ := strconv.Atoi(msg.Args[0])
 			if n > 0 {
 				num = n
 			}
@@ -49,7 +49,7 @@ var list = bot.Command{
 		}
 
 		users := members.Profiles
-		var str = "Список " + strbytes.Join(a, ' ') + ":\n"
+		var str = "Список " + strbytes.Join(msg.Args, ' ') + ":\n"
 		for i := 0; i < num; i++ {
 			n := myRand.Intn(l)
 			u := users[n]
@@ -67,10 +67,10 @@ var number = bot.Command{
 	Help: "/rand - рандомное число [0, 100]" +
 		"\n/rand <max> - рандомное число [0, max] (0 < max <= maxInt64)",
 	Options: bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
+	Run: func(ctx *bot.Context, msg *bot.Message) {
 		var max int64 = 100
-		if len(a) > 0 {
-			num := a[0]
+		if len(msg.Args) > 0 {
+			num := msg.Args[0]
 			var err error
 			max, err = strconv.ParseInt(num, 10, 64)
 			if err != nil || max <= 0 {
@@ -86,8 +86,8 @@ var who = bot.Command{
 	Description: "Выбрать рандомного участника",
 	Help:        "/who <string>",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		members, err := ctx.Conv.GetMembers()
+	Run: func(ctx *bot.Context, msg *bot.Message) {
+		members, err := ctx.Conversation().GetMembers()
 		if err != nil {
 			ctx.ReplyText("У бота недостаточно прав доступа для выполнения команды")
 			return
@@ -96,8 +96,8 @@ var who = bot.Command{
 		r := myRand.Intn(len(members.Profiles))
 		p := members.Profiles[r]
 		str := vkutils.Mention(p.ID.ToID(), p.FirstName+" "+p.LastName)
-		if len(a) > 0 {
-			str += " — " + strbytes.Join(a, ' ')
+		if len(msg.Args) > 0 {
+			str += " — " + strbytes.Join(msg.Args, ' ')
 		}
 
 		ctx.ReplyText(str)
@@ -109,12 +109,10 @@ var flip = bot.Command{
 	Description: "Подбросить монетку",
 	Help:        "",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		var r string
+	Run: func(ctx *bot.Context, msg *bot.Message) {
+		r := "Выпала решка"
 		if myRand.Intn(2) == 1 {
 			r = "Выпал орёл"
-		} else {
-			r = "Выпала решка"
 		}
 		ctx.ReplyText(r)
 	},
@@ -125,13 +123,13 @@ var info = bot.Command{
 	Description: "Вероятность события",
 	Help:        "/info <событие> - случайная вероятность события",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		if len(a) == 0 {
+	Run: func(ctx *bot.Context, msg *bot.Message) {
+		if len(msg.Args) == 0 {
 			ctx.ReplyText("Укажите событие")
 			return
 		}
 		p := myRand.Intn(101)
-		e := strbytes.Join(a, ' ')
+		e := strbytes.Join(msg.Args, ' ')
 		ctx.ReplyText("Вероятность того, что " + e + " — " + strconv.Itoa(p) + "%")
 	},
 }
@@ -141,13 +139,13 @@ var when = bot.Command{
 	Description: "Когда произойдет событие",
 	Help:        "/when <событие> - случайная дата события",
 	Options:     bot.OptionInChat | bot.OptionInDialog,
-	Run: func(ctx *bot.Context, msg *bot.NewMessage, a []string) {
-		if len(a) == 0 {
+	Run: func(ctx *bot.Context, msg *bot.Message) {
+		if len(msg.Args) == 0 {
 			ctx.ReplyText("Укажите событие")
 			return
 		}
 		t := time.Now().AddDate(myRand.Intn(51), myRand.Intn(12), myRand.Intn(31))
-		e := strbytes.Join(a, ' ')
+		e := strbytes.Join(msg.Args, ' ')
 		ctx.ReplyText(e + " " + t.Format("02 Jan 2006"))
 	},
 }

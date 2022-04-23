@@ -18,30 +18,31 @@ import (
 )
 
 func main() {
-	println(wfs.GetExecName(), wfs.GetExecDir())
+	println(wfs.ExecPath())
 	println("PID", os.Getpid())
 	println("vkapi version:", vkapi.Version)
 
-	log := logger.New(logger.DefaultWriter, "MAIN")
+	logWriter := logger.DefaultWriter
 	if logPath := os.Getenv("LOG_PATH"); logPath != "" {
-		w, err := logger.NewWriterFile(logPath)
+		var err error
+		logWriter, err = logger.NewWriterFile(logPath)
 		if err != nil {
 			panic(err)
 		}
-		log.SetWriter(w)
 	}
+	log := logger.New(logWriter, "MAIN")
 
 	log.Info("vk authorization")
 	vk, vkerr := vkapi.Auth(os.Getenv("VK_TOKEN"))
 	if vkerr != nil {
-		log.Error("vk auth: %s", vkerr.Error())
+		log.Error("vk auth: %s", vkerr.String())
 		return
 	}
 
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 
-	b := bot.New(vk, log.Copy("BOT"))
-	err := b.Run(ctx, true, std.Setup(b), &debug.Module, &random.Module, &yalm.Module, &images.Module)
+	b := bot.New(vk, logger.New(logWriter, "BOT"))
+	err := b.Run(ctx, std.Setup(b), &debug.Module, &random.Module, &yalm.Module, &images.Module)
 	switch err {
 	case nil:
 		log.Info("stopping without error")
